@@ -74,16 +74,25 @@ function renderShape(typeId: string, def: PieceTypeDef, color: string) {
             rx={0.5}
           />
         )}
-        {diverge && (
-          <path
-            d={`M 0 0 A 40 40 0 0 ${typeId === "switchL" ? 1 : 0} ${diverge.localX} ${diverge.localY}`}
-            stroke={color}
-            strokeWidth={TRACK_GAUGE * 0.6}
-            strokeLinecap="round"
-            fill="none"
-            opacity={0.7}
-          />
-        )}
+        {diverge && (() => {
+          // Cubic Bezier with tangent horizontal at start, 22.5° at end
+          const angleRad = (22.5 * Math.PI) / 180;
+          const handleLen = Math.hypot(diverge.localX, diverge.localY) / 3;
+          const cp1x = handleLen;
+          const cp1y = 0;
+          const cp2x = diverge.localX - handleLen * Math.cos(angleRad);
+          const cp2y = diverge.localY - handleLen * Math.sign(diverge.localY) * Math.sin(angleRad);
+          return (
+            <path
+              d={`M 0 0 C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${diverge.localX} ${diverge.localY}`}
+              stroke={color}
+              strokeWidth={TRACK_GAUGE * 0.6}
+              strokeLinecap="round"
+              fill="none"
+              opacity={0.7}
+            />
+          );
+        })()}
       </>
     );
   }

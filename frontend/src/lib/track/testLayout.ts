@@ -38,5 +38,22 @@ export function buildTestLayout(): Layout {
     lastId = getNewPieceId(prev, layout);
   }
 
+  // Add opposite curve + straight on the switch's diverge to form parallel siding
+  let switchPieceId = "";
+  for (const [id, p] of layout.pieces) {
+    if (p.typeId === "switchL") {
+      switchPieceId = id;
+      break;
+    }
+  }
+  if (switchPieceId) {
+    prev = layout;
+    layout = placePiece(layout, "curveR40R", switchPieceId, "diverge", "a");
+    let sidingId = getNewPieceId(prev, layout);
+
+    prev = layout;
+    layout = placePiece(layout, "straight16", sidingId, "b", "a");
+  }
+
   return layout;
 }
