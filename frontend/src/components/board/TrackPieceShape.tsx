@@ -4,6 +4,7 @@ import type { PieceTypeDef } from "../../lib/track/pieces";
 interface TrackPieceShapeProps {
   piece: PlacedPiece;
   pieceDef: PieceTypeDef;
+  isHighlighted?: boolean;
 }
 
 const COLORS: Record<string, string> = {
@@ -15,17 +16,83 @@ const COLORS: Record<string, string> = {
   switchR: "#F57C00",
 };
 
+const HIGHLIGHT_COLORS: Record<string, string> = {
+  straight16: "#888",
+  straight4: "#aaa",
+  curveR40L: "#64B5F6",
+  curveR40R: "#42A5F5",
+  switchL: "#FFB74D",
+  switchR: "#FFA726",
+};
+
 const TRACK_GAUGE = 4;
 
-export function TrackPieceShape({ piece, pieceDef }: TrackPieceShapeProps) {
-  const color = COLORS[piece.typeId] ?? "#888";
+export function TrackPieceShape({ piece, pieceDef, isHighlighted }: TrackPieceShapeProps) {
+  const color = (isHighlighted ? HIGHLIGHT_COLORS[piece.typeId] : COLORS[piece.typeId]) ?? "#888";
   const rotation = piece.rotationIndex * 22.5;
 
   return (
     <g transform={`translate(${piece.x}, ${piece.y}) rotate(${rotation})`}>
       {renderShape(piece.typeId, pieceDef, color)}
+      {isHighlighted && renderHighlightOutline(piece.typeId, pieceDef)}
     </g>
   );
+}
+
+function renderHighlightOutline(typeId: string, def: PieceTypeDef) {
+  const pointB = def.connectionPoints.find((p) => p.id === "b");
+
+  if (typeId === "straight16" || typeId === "straight4") {
+    const length = pointB ? pointB.localX : 16;
+    return (
+      <rect
+        x={-0.5}
+        y={-TRACK_GAUGE / 2 - 0.5}
+        width={length + 1}
+        height={TRACK_GAUGE + 1}
+        fill="none"
+        stroke="#fff"
+        strokeWidth={0.4}
+        strokeDasharray="1 1"
+        opacity={0.8}
+      />
+    );
+  }
+
+  if (typeId === "curveR40L" || typeId === "curveR40R") {
+    if (!pointB) return null;
+    const sweepFlag = typeId === "curveR40L" ? 1 : 0;
+    return (
+      <path
+        d={`M 0 0 A 40 40 0 0 ${sweepFlag} ${pointB.localX} ${pointB.localY}`}
+        stroke="#fff"
+        strokeWidth={TRACK_GAUGE + 1}
+        strokeLinecap="round"
+        fill="none"
+        opacity={0.3}
+      />
+    );
+  }
+
+  if (typeId === "switchL" || typeId === "switchR") {
+    const through = def.connectionPoints.find((p) => p.id === "through");
+    if (!through) return null;
+    return (
+      <rect
+        x={-0.5}
+        y={-TRACK_GAUGE / 2 - 0.5}
+        width={through.localX + 1}
+        height={TRACK_GAUGE + 1}
+        fill="none"
+        stroke="#fff"
+        strokeWidth={0.4}
+        strokeDasharray="1 1"
+        opacity={0.8}
+      />
+    );
+  }
+
+  return null;
 }
 
 function renderShape(typeId: string, def: PieceTypeDef, color: string) {
@@ -75,7 +142,6 @@ function renderShape(typeId: string, def: PieceTypeDef, color: string) {
           />
         )}
         {diverge && (() => {
-          // Cubic Bezier with tangent horizontal at start, 22.5° at end
           const angleRad = (22.5 * Math.PI) / 180;
           const handleLen = Math.hypot(diverge.localX, diverge.localY) / 3;
           const cp1x = handleLen;

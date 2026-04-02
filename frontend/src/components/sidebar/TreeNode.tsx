@@ -4,12 +4,11 @@ interface TreeNodeProps {
   item: TreeItem;
   expanded: Set<string>;
   onToggle: (id: string) => void;
-  selectedId: string | null;
   onSelect: (id: string) => void;
   isLast: boolean;
 }
 
-export function TreeNode({ item, expanded, onToggle, selectedId, onSelect, isLast }: TreeNodeProps) {
+export function TreeNode({ item, expanded, onToggle, onSelect, isLast }: TreeNodeProps) {
   const isFolder = item.children !== undefined;
   const isExpanded = isFolder && expanded.has(item.id);
 
@@ -38,7 +37,6 @@ export function TreeNode({ item, expanded, onToggle, selectedId, onSelect, isLas
                 item={child}
                 expanded={expanded}
                 onToggle={onToggle}
-                selectedId={selectedId}
                 onSelect={onSelect}
                 isLast={i === item.children!.length - 1}
               />
@@ -53,12 +51,9 @@ export function TreeNode({ item, expanded, onToggle, selectedId, onSelect, isLas
     <div
       className={`tree-line tree-node flex items-center gap-1 relative cursor-pointer px-1
         ${isLast ? "tree-line-last" : ""}
-        ${selectedId === item.id ? "bg-[#000080] text-white" : "hover:bg-[#000080] hover:text-white"}`}
+        hover:bg-[#000080] hover:text-white`}
       onClick={() => onSelect(item.id)}
     >
-      {item.thumbnailSrc && (
-        <img alt="Track Icon" className="w-4 h-4 object-contain grayscale shrink-0" src={item.thumbnailSrc} />
-      )}
       <span>{item.label}</span>
     </div>
   );

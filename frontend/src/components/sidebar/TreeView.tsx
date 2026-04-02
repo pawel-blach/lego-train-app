@@ -4,11 +4,10 @@ import { TreeNode } from "./TreeNode";
 
 interface TreeViewProps {
   items: TreeItem[];
-  selectedId: string | null;
   onSelect: (id: string) => void;
 }
 
-export function TreeView({ items, selectedId, onSelect }: TreeViewProps) {
+export function TreeView({ items, onSelect }: TreeViewProps) {
   const { expanded, toggle } = useTreeState(["track-pieces", "straights"]);
 
   return (
@@ -39,7 +38,6 @@ export function TreeView({ items, selectedId, onSelect }: TreeViewProps) {
                     item={child}
                     expanded={expanded}
                     onToggle={toggle}
-                    selectedId={selectedId}
                     onSelect={onSelect}
                     isLast={i === item.children!.length - 1}
                   />

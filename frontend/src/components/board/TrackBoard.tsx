@@ -2,16 +2,21 @@ import { useMemo } from "react";
 import { PIECE_TYPES } from "../../lib/track/pieces";
 import { getWorldConnectionPoint } from "../../lib/track/geometry";
 import { getFreeConnectionPoints } from "../../lib/track/operations";
-import { buildTestLayout } from "../../lib/track/testLayout";
+import { useTrackLayout } from "../../context/TrackLayoutContext";
 import { TrackPieceShape } from "./TrackPieceShape";
 import { ConnectionDot } from "./ConnectionDot";
 
 const PADDING = 20;
+const DEFAULT_VIEWBOX = "-50 -50 100 100";
 
 export function TrackBoard() {
-  const layout = useMemo(() => buildTestLayout(), []);
+  const { layout, lastPieceId } = useTrackLayout();
 
-  const { bounds, allPoints } = useMemo(() => {
+  const { viewBox, allPoints } = useMemo(() => {
+    if (layout.pieces.size === 0) {
+      return { viewBox: DEFAULT_VIEWBOX, allPoints: [] };
+    }
+
     let minX = Infinity,
       minY = Infinity,
       maxX = -Infinity,
@@ -31,8 +36,13 @@ export function TrackBoard() {
       }
     }
 
+    const vx = minX - PADDING;
+    const vy = minY - PADDING;
+    const vw = maxX - minX + 2 * PADDING;
+    const vh = maxY - minY + 2 * PADDING;
+
     return {
-      bounds: { minX, minY, maxX, maxY },
+      viewBox: `${vx} ${vy} ${vw} ${vh}`,
       allPoints: points,
     };
   }, [layout]);
@@ -42,16 +52,11 @@ export function TrackBoard() {
     return new Set(free.map((fp) => `${fp.pieceId}:${fp.pointId}`));
   }, [layout]);
 
-  const vx = bounds.minX - PADDING;
-  const vy = bounds.minY - PADDING;
-  const vw = bounds.maxX - bounds.minX + 2 * PADDING;
-  const vh = bounds.maxY - bounds.minY + 2 * PADDING;
-
   return (
     <svg
       width="100%"
       height="100%"
-      viewBox={`${vx} ${vy} ${vw} ${vh}`}
+      viewBox={viewBox}
       preserveAspectRatio="xMidYMid meet"
       className="absolute inset-0"
     >
@@ -60,6 +65,7 @@ export function TrackBoard() {
           key={piece.id}
           piece={piece}
           pieceDef={PIECE_TYPES[piece.typeId]}
+          isHighlighted={piece.id === lastPieceId}
         />
       ))}
       {allPoints.map((pt) => (
