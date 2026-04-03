@@ -7,6 +7,8 @@ interface DragState {
   pieceId: string;
   startClientX: number;
   startClientY: number;
+  startSvgX: number;
+  startSvgY: number;
   isDragging: boolean;
   currentDx: number;
   currentDy: number;
@@ -22,26 +24,37 @@ export function usePieceDrag(
   const [dragPreview, setDragPreview] = useState<{ dx: number; dy: number } | null>(null);
   const dragRef = useRef<DragState | null>(null);
 
-  const screenToSvgScale = useCallback(() => {
-    const svg = svgRef.current;
-    if (!svg) return 1;
-    const viewBox = svg.viewBox.baseVal;
-    return viewBox.width / svg.clientWidth;
-  }, [svgRef]);
+  const screenToSvg = useCallback(
+    (clientX: number, clientY: number): { x: number; y: number } | null => {
+      const svg = svgRef.current;
+      if (!svg) return null;
+      const pt = svg.createSVGPoint();
+      pt.x = clientX;
+      pt.y = clientY;
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return null;
+      const svgPt = pt.matrixTransform(ctm.inverse());
+      return { x: svgPt.x, y: svgPt.y };
+    },
+    [svgRef]
+  );
 
   const startDrag = useCallback(
     (pieceId: string, e: React.PointerEvent) => {
+      const svgPt = screenToSvg(e.clientX, e.clientY);
       dragRef.current = {
         pieceId,
         startClientX: e.clientX,
         startClientY: e.clientY,
+        startSvgX: svgPt?.x ?? 0,
+        startSvgY: svgPt?.y ?? 0,
         isDragging: false,
         currentDx: 0,
         currentDy: 0,
       };
       (e.target as Element).setPointerCapture(e.pointerId);
     },
-    []
+    [screenToSvg]
   );
 
   const updateDrag = useCallback(
@@ -57,9 +70,10 @@ export function usePieceDrag(
         drag.isDragging = true;
       }
 
-      const scale = screenToSvgScale();
-      const rawDx = screenDx * scale;
-      const rawDy = screenDy * scale;
+      const svgPt = screenToSvg(e.clientX, e.clientY);
+      if (!svgPt) return true;
+      const rawDx = svgPt.x - drag.startSvgX;
+      const rawDy = svgPt.y - drag.startSvgY;
       const dx = snapToGrid(rawDx);
       const dy = snapToGrid(rawDy);
       drag.currentDx = dx;
@@ -67,7 +81,7 @@ export function usePieceDrag(
       setDragPreview({ dx, dy });
       return true;
     },
-    [screenToSvgScale]
+    [screenToSvg]
   );
 
   const endDrag = useCallback((): {
