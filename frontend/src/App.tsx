@@ -11,7 +11,7 @@ export default function App() {
         <MenuBar />
         <div className="flex-1 flex overflow-hidden">
           <BuildExplorer />
-          <main className="flex-1 relative overflow-auto felt-texture cursor-crosshair">
+          <main className="flex-1 relative overflow-hidden bg-[#2e7d32] cursor-crosshair">
             <TrackBoard />
           </main>
         </div>

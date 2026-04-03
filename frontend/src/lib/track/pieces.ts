@@ -44,7 +44,7 @@ export const PIECE_TYPES: Record<string, PieceTypeDef> = {
     name: "Curve R40 Left",
     connectionPoints: [
       { id: "a", localX: 0, localY: 0, localAngle: 180 },
-      { id: "b", localX: R40_SIN_22_5, localY: R40_1_MINUS_COS_22_5, localAngle: 22.5 },
+      { id: "b", localX: R40_SIN_22_5, localY: -R40_1_MINUS_COS_22_5, localAngle: -22.5 },
     ],
   },
   curveR40R: {
@@ -52,7 +52,7 @@ export const PIECE_TYPES: Record<string, PieceTypeDef> = {
     name: "Curve R40 Right",
     connectionPoints: [
       { id: "a", localX: 0, localY: 0, localAngle: 180 },
-      { id: "b", localX: R40_SIN_22_5, localY: -R40_1_MINUS_COS_22_5, localAngle: -22.5 },
+      { id: "b", localX: R40_SIN_22_5, localY: R40_1_MINUS_COS_22_5, localAngle: 22.5 },
     ],
   },
   switchL: {
@@ -61,7 +61,7 @@ export const PIECE_TYPES: Record<string, PieceTypeDef> = {
     connectionPoints: [
       { id: "trunk", localX: 0, localY: 0, localAngle: 180 },
       { id: "through", localX: 32, localY: 0, localAngle: 0 },
-      { id: "diverge", localX: SWITCH_DIVERGE_X, localY: SWITCH_DIVERGE_Y, localAngle: 22.5 },
+      { id: "diverge", localX: SWITCH_DIVERGE_X, localY: -SWITCH_DIVERGE_Y, localAngle: -22.5 },
     ],
   },
   switchR: {
@@ -70,7 +70,7 @@ export const PIECE_TYPES: Record<string, PieceTypeDef> = {
     connectionPoints: [
       { id: "trunk", localX: 0, localY: 0, localAngle: 180 },
       { id: "through", localX: 32, localY: 0, localAngle: 0 },
-      { id: "diverge", localX: SWITCH_DIVERGE_X, localY: -SWITCH_DIVERGE_Y, localAngle: -22.5 },
+      { id: "diverge", localX: SWITCH_DIVERGE_X, localY: SWITCH_DIVERGE_Y, localAngle: 22.5 },
     ],
   },
 };

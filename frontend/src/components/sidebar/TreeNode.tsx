@@ -6,9 +6,10 @@ interface TreeNodeProps {
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   isLast: boolean;
+  remainingCounts: Map<string, number>;
 }
 
-export function TreeNode({ item, expanded, onToggle, onSelect, isLast }: TreeNodeProps) {
+export function TreeNode({ item, expanded, onToggle, onSelect, isLast, remainingCounts }: TreeNodeProps) {
   const isFolder = item.children !== undefined;
   const isExpanded = isFolder && expanded.has(item.id);
 
@@ -39,6 +40,7 @@ export function TreeNode({ item, expanded, onToggle, onSelect, isLast }: TreeNod
                 onToggle={onToggle}
                 onSelect={onSelect}
                 isLast={i === item.children!.length - 1}
+                remainingCounts={remainingCounts}
               />
             ))}
           </div>
@@ -47,14 +49,17 @@ export function TreeNode({ item, expanded, onToggle, onSelect, isLast }: TreeNod
     );
   }
 
+  const remaining = remainingCounts.get(item.id) ?? 0;
+  const isDisabled = remaining <= 0;
+
   return (
     <div
-      className={`tree-line tree-node flex items-center gap-1 relative cursor-pointer px-1
+      className={`tree-line tree-node flex items-center gap-1 relative px-1
         ${isLast ? "tree-line-last" : ""}
-        hover:bg-[#000080] hover:text-white`}
+        ${isDisabled ? "opacity-50 pointer-events-none" : "cursor-pointer hover:bg-[#000080] hover:text-white"}`}
       onClick={() => onSelect(item.id)}
     >
-      <span>{item.label}</span>
+      <span>{item.label} ({remaining})</span>
     </div>
   );
 }

@@ -61,7 +61,7 @@ function renderHighlightOutline(typeId: string, def: PieceTypeDef) {
 
   if (typeId === "curveR40L" || typeId === "curveR40R") {
     if (!pointB) return null;
-    const sweepFlag = typeId === "curveR40L" ? 1 : 0;
+    const sweepFlag = typeId === "curveR40L" ? 0 : 1;
     return (
       <path
         d={`M 0 0 A 40 40 0 0 ${sweepFlag} ${pointB.localX} ${pointB.localY}`}
@@ -114,7 +114,7 @@ function renderShape(typeId: string, def: PieceTypeDef, color: string) {
 
   if (typeId === "curveR40L" || typeId === "curveR40R") {
     if (!pointB) return null;
-    const sweepFlag = typeId === "curveR40L" ? 1 : 0;
+    const sweepFlag = typeId === "curveR40L" ? 0 : 1;
     return (
       <path
         d={`M 0 0 A 40 40 0 0 ${sweepFlag} ${pointB.localX} ${pointB.localY}`}

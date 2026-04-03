@@ -1,50 +1,30 @@
-import { useMemo } from "react";
+import { useRef, useMemo } from "react";
 import { PIECE_TYPES } from "../../lib/track/pieces";
 import { getWorldConnectionPoint } from "../../lib/track/geometry";
 import { getFreeConnectionPoints } from "../../lib/track/operations";
 import { useTrackLayout } from "../../context/TrackLayoutContext";
+import { useViewBox } from "../../hooks/useViewBox";
 import { TrackPieceShape } from "./TrackPieceShape";
 import { ConnectionDot } from "./ConnectionDot";
 
-const PADDING = 20;
-const DEFAULT_VIEWBOX = "-50 -50 100 100";
+const GRID_SIZE = 8;
+const GRID_EXTENT = 10000;
 
 export function TrackBoard() {
   const { layout, lastPieceId } = useTrackLayout();
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const { viewBox, handlers } = useViewBox(svgRef);
 
-  const { viewBox, allPoints } = useMemo(() => {
-    if (layout.pieces.size === 0) {
-      return { viewBox: DEFAULT_VIEWBOX, allPoints: [] };
-    }
-
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-
+  const allPoints = useMemo(() => {
     const points: { x: number; y: number; key: string }[] = [];
-
     for (const piece of layout.pieces.values()) {
       const def = PIECE_TYPES[piece.typeId];
       for (const pt of def.connectionPoints) {
         const world = getWorldConnectionPoint(piece, pt);
-        minX = Math.min(minX, world.x);
-        minY = Math.min(minY, world.y);
-        maxX = Math.max(maxX, world.x);
-        maxY = Math.max(maxY, world.y);
         points.push({ x: world.x, y: world.y, key: `${piece.id}:${pt.id}` });
       }
     }
-
-    const vx = minX - PADDING;
-    const vy = minY - PADDING;
-    const vw = maxX - minX + 2 * PADDING;
-    const vh = maxY - minY + 2 * PADDING;
-
-    return {
-      viewBox: `${vx} ${vy} ${vw} ${vh}`,
-      allPoints: points,
-    };
+    return points;
   }, [layout]);
 
   const freeKeys = useMemo(() => {
@@ -54,12 +34,46 @@ export function TrackBoard() {
 
   return (
     <svg
+      ref={svgRef}
       width="100%"
       height="100%"
       viewBox={viewBox}
       preserveAspectRatio="xMidYMid meet"
       className="absolute inset-0"
+      {...handlers}
     >
+      <defs>
+        <pattern
+          id="grid"
+          width={GRID_SIZE}
+          height={GRID_SIZE}
+          patternUnits="userSpaceOnUse"
+        >
+          <path
+            d={`M ${GRID_SIZE} 0 L 0 0 0 ${GRID_SIZE}`}
+            fill="none"
+            stroke="rgba(0,0,0,0.12)"
+            strokeWidth={0.3}
+          />
+        </pattern>
+      </defs>
+
+      {/* Green background + grid covering the pannable area */}
+      <rect
+        x={-GRID_EXTENT}
+        y={-GRID_EXTENT}
+        width={GRID_EXTENT * 2}
+        height={GRID_EXTENT * 2}
+        fill="#2e7d32"
+      />
+      <rect
+        x={-GRID_EXTENT}
+        y={-GRID_EXTENT}
+        width={GRID_EXTENT * 2}
+        height={GRID_EXTENT * 2}
+        fill="url(#grid)"
+      />
+
       {[...layout.pieces.values()].map((piece) => (
         <TrackPieceShape
           key={piece.id}

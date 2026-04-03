@@ -5,9 +5,10 @@ import { TreeNode } from "./TreeNode";
 interface TreeViewProps {
   items: TreeItem[];
   onSelect: (id: string) => void;
+  remainingCounts: Map<string, number>;
 }
 
-export function TreeView({ items, onSelect }: TreeViewProps) {
+export function TreeView({ items, onSelect, remainingCounts }: TreeViewProps) {
   const { expanded, toggle } = useTreeState(["track-pieces", "straights"]);
 
   return (
@@ -40,6 +41,7 @@ export function TreeView({ items, onSelect }: TreeViewProps) {
                     onToggle={toggle}
                     onSelect={onSelect}
                     isLast={i === item.children!.length - 1}
+                    remainingCounts={remainingCounts}
                   />
                 ))}
               </div>

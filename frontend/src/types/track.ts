@@ -4,3 +4,8 @@ export interface TreeItem {
   icon?: string;
   children?: TreeItem[];
 }
+
+export interface TrackBudget {
+  name: string;
+  pieces: Record<string, number>;
+}
