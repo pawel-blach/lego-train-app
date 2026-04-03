@@ -4,6 +4,7 @@ import {
   getWorldConnectionPoint,
   connectionPointsMatch,
   computeSnapTransform,
+  normalizeAngle,
 } from "./geometry";
 import type { WorldConnectionPoint } from "./geometry";
 
@@ -148,6 +149,97 @@ export function placePiece(
     pieces,
     connections: [...connections, ...additionalConnections],
   };
+}
+
+export function getConnectedSubgraph(layout: Layout, pieceIds: string[]): Set<string> {
+  const result = new Set(pieceIds);
+  const queue = [...pieceIds];
+
+  while (queue.length > 0) {
+    const current = queue.pop()!;
+    for (const conn of layout.connections) {
+      let neighbor: string | null = null;
+      if (conn.pieceAId === current) neighbor = conn.pieceBId;
+      else if (conn.pieceBId === current) neighbor = conn.pieceAId;
+
+      if (neighbor && !result.has(neighbor)) {
+        result.add(neighbor);
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  return result;
+}
+
+export function movePieces(
+  layout: Layout,
+  pieceIds: Set<string>,
+  dx: number,
+  dy: number,
+  detach: boolean
+): Layout {
+  const pieces = new Map(layout.pieces);
+  let connections = [...layout.connections];
+
+  if (detach) {
+    connections = connections.filter(
+      (c) =>
+        (pieceIds.has(c.pieceAId) && pieceIds.has(c.pieceBId)) ||
+        (!pieceIds.has(c.pieceAId) && !pieceIds.has(c.pieceBId))
+    );
+  } else {
+    connections = connections.filter(
+      (c) =>
+        (pieceIds.has(c.pieceAId) && pieceIds.has(c.pieceBId)) ||
+        (!pieceIds.has(c.pieceAId) && !pieceIds.has(c.pieceBId))
+    );
+  }
+
+  for (const id of pieceIds) {
+    const piece = pieces.get(id);
+    if (piece) {
+      pieces.set(id, { ...piece, x: piece.x + dx, y: piece.y + dy });
+    }
+  }
+
+  return { pieces, connections };
+}
+
+const SNAP_THRESHOLD = 3;
+
+export function findNearbyConnection(
+  layout: Layout,
+  movedPieceIds: Set<string>
+): { movedPieceId: string; movedPointId: string; staticPieceId: string; staticPointId: string; dx: number; dy: number } | null {
+  const freePoints = getFreeConnectionPoints(layout);
+
+  const movedFree = freePoints.filter((p) => movedPieceIds.has(p.pieceId));
+  const staticFree = freePoints.filter((p) => !movedPieceIds.has(p.pieceId));
+
+  let best: ReturnType<typeof findNearbyConnection> = null;
+  let bestDist = SNAP_THRESHOLD;
+
+  for (const mf of movedFree) {
+    for (const sf of staticFree) {
+      const dist = Math.hypot(mf.x - sf.x, mf.y - sf.y);
+      const angleDiff = Math.abs(normalizeAngle(mf.angle - sf.angle - 180));
+
+      if (dist < bestDist && angleDiff < 5) {
+        bestDist = dist;
+        best = {
+          movedPieceId: mf.pieceId,
+          movedPointId: mf.pointId,
+          staticPieceId: sf.pieceId,
+          staticPointId: sf.pointId,
+          dx: sf.x - mf.x,
+          dy: sf.y - mf.y,
+        };
+      }
+    }
+  }
+
+  return best;
 }
 
 export function removePiece(layout: Layout, pieceId: string): Layout {
