@@ -1,3 +1,4 @@
+import type { PointerEvent } from "react";
 import type { PlacedPiece } from "../../lib/track/layout";
 import type { PieceTypeDef } from "../../lib/track/pieces";
 
@@ -5,6 +6,8 @@ interface TrackPieceShapeProps {
   piece: PlacedPiece;
   pieceDef: PieceTypeDef;
   isHighlighted?: boolean;
+  isSelected?: boolean;
+  onPiecePointerDown?: (pieceId: string, e: PointerEvent) => void;
 }
 
 const COLORS: Record<string, string> = {
@@ -26,17 +29,135 @@ const HIGHLIGHT_COLORS: Record<string, string> = {
 };
 
 const TRACK_GAUGE = 4;
+const HIT_PADDING = 3;
 
-export function TrackPieceShape({ piece, pieceDef, isHighlighted }: TrackPieceShapeProps) {
+export function TrackPieceShape({ piece, pieceDef, isHighlighted, isSelected, onPiecePointerDown }: TrackPieceShapeProps) {
   const color = (isHighlighted ? HIGHLIGHT_COLORS[piece.typeId] : COLORS[piece.typeId]) ?? "#888";
   const rotation = piece.rotationIndex * 22.5;
 
+  const handlePointerDown = (e: PointerEvent) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    onPiecePointerDown?.(piece.id, e);
+  };
+
   return (
-    <g transform={`translate(${piece.x}, ${piece.y}) rotate(${rotation})`}>
+    <g
+      transform={`translate(${piece.x}, ${piece.y}) rotate(${rotation})`}
+      onPointerDown={handlePointerDown}
+      style={{ cursor: "pointer" }}
+    >
+      {renderHitArea(piece.typeId, pieceDef)}
       {renderShape(piece.typeId, pieceDef, color)}
       {isHighlighted && renderHighlightOutline(piece.typeId, pieceDef)}
+      {isSelected && renderSelectionOutline(piece.typeId, pieceDef)}
     </g>
   );
+}
+
+function renderHitArea(typeId: string, def: PieceTypeDef) {
+  const pointB = def.connectionPoints.find((p) => p.id === "b");
+
+  if (typeId === "straight16" || typeId === "straight4") {
+    const length = pointB ? pointB.localX : 16;
+    return (
+      <rect
+        x={-HIT_PADDING}
+        y={-TRACK_GAUGE / 2 - HIT_PADDING}
+        width={length + HIT_PADDING * 2}
+        height={TRACK_GAUGE + HIT_PADDING * 2}
+        fill="transparent"
+        stroke="none"
+      />
+    );
+  }
+
+  if (typeId === "curveR40L" || typeId === "curveR40R") {
+    if (!pointB) return null;
+    const sweepFlag = typeId === "curveR40L" ? 0 : 1;
+    return (
+      <path
+        d={`M 0 0 A 40 40 0 0 ${sweepFlag} ${pointB.localX} ${pointB.localY}`}
+        stroke="transparent"
+        strokeWidth={TRACK_GAUGE + HIT_PADDING * 2}
+        strokeLinecap="round"
+        fill="none"
+      />
+    );
+  }
+
+  if (typeId === "switchL" || typeId === "switchR") {
+    const through = def.connectionPoints.find((p) => p.id === "through");
+    if (!through) return null;
+    return (
+      <rect
+        x={-HIT_PADDING}
+        y={-TRACK_GAUGE / 2 - HIT_PADDING}
+        width={through.localX + HIT_PADDING * 2}
+        height={TRACK_GAUGE + HIT_PADDING * 2}
+        fill="transparent"
+        stroke="none"
+      />
+    );
+  }
+
+  return null;
+}
+
+function renderSelectionOutline(typeId: string, def: PieceTypeDef) {
+  const pointB = def.connectionPoints.find((p) => p.id === "b");
+
+  if (typeId === "straight16" || typeId === "straight4") {
+    const length = pointB ? pointB.localX : 16;
+    return (
+      <rect
+        x={-1}
+        y={-TRACK_GAUGE / 2 - 1}
+        width={length + 2}
+        height={TRACK_GAUGE + 2}
+        fill="none"
+        stroke="#00bcd4"
+        strokeWidth={0.5}
+        strokeDasharray="1.5 1"
+        opacity={0.9}
+      />
+    );
+  }
+
+  if (typeId === "curveR40L" || typeId === "curveR40R") {
+    if (!pointB) return null;
+    const sweepFlag = typeId === "curveR40L" ? 0 : 1;
+    return (
+      <path
+        d={`M 0 0 A 40 40 0 0 ${sweepFlag} ${pointB.localX} ${pointB.localY}`}
+        stroke="#00bcd4"
+        strokeWidth={TRACK_GAUGE + 2}
+        strokeLinecap="round"
+        fill="none"
+        opacity={0.35}
+      />
+    );
+  }
+
+  if (typeId === "switchL" || typeId === "switchR") {
+    const through = def.connectionPoints.find((p) => p.id === "through");
+    if (!through) return null;
+    return (
+      <rect
+        x={-1}
+        y={-TRACK_GAUGE / 2 - 1}
+        width={through.localX + 2}
+        height={TRACK_GAUGE + 2}
+        fill="none"
+        stroke="#00bcd4"
+        strokeWidth={0.5}
+        strokeDasharray="1.5 1"
+        opacity={0.9}
+      />
+    );
+  }
+
+  return null;
 }
 
 function renderHighlightOutline(typeId: string, def: PieceTypeDef) {

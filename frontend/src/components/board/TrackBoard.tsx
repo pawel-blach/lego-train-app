@@ -1,8 +1,8 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useCallback, type PointerEvent } from "react";
 import { PIECE_TYPES } from "../../lib/track/pieces";
 import { getWorldConnectionPoint } from "../../lib/track/geometry";
 import { getFreeConnectionPoints } from "../../lib/track/operations";
-import { useTrackLayout } from "../../context/TrackLayoutContext";
+import { useTrackLayout, useTrackLayoutDispatch } from "../../context/TrackLayoutContext";
 import { useViewBox } from "../../hooks/useViewBox";
 import { TrackPieceShape } from "./TrackPieceShape";
 import { ConnectionDot } from "./ConnectionDot";
@@ -11,9 +11,10 @@ const GRID_SIZE = 8;
 const GRID_EXTENT = 10000;
 
 export function TrackBoard() {
-  const { layout, lastPieceId } = useTrackLayout();
+  const { layout, lastPieceId, selection } = useTrackLayout();
+  const dispatch = useTrackLayoutDispatch();
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const { viewBox, handlers } = useViewBox(svgRef);
+  const { viewBox, handlers, spaceHeld } = useViewBox(svgRef);
 
   const allPoints = useMemo(() => {
     const points: { x: number; y: number; key: string }[] = [];
@@ -32,6 +33,17 @@ export function TrackBoard() {
     return new Set(free.map((fp) => `${fp.pieceId}:${fp.pointId}`));
   }, [layout]);
 
+  const handlePiecePointerDown = useCallback((pieceId: string, e: PointerEvent) => {
+    dispatch({ type: "SELECT_PIECE", pieceId, additive: e.shiftKey });
+  }, [dispatch]);
+
+  const handleBoardPointerDown = useCallback((e: PointerEvent<SVGSVGElement>) => {
+    if (e.button !== 0) return;
+    if (!spaceHeld?.current) {
+      dispatch({ type: "CLEAR_SELECTION" });
+    }
+  }, [dispatch, spaceHeld]);
+
   return (
     <svg
       ref={svgRef}
@@ -40,7 +52,12 @@ export function TrackBoard() {
       viewBox={viewBox}
       preserveAspectRatio="xMidYMid meet"
       className="absolute inset-0"
-      {...handlers}
+      onPointerDown={(e) => {
+        handleBoardPointerDown(e);
+        handlers.onMouseDown(e as any);
+      }}
+      onMouseMove={handlers.onMouseMove}
+      onMouseUp={handlers.onMouseUp}
     >
       <defs>
         <pattern
@@ -80,6 +97,8 @@ export function TrackBoard() {
           piece={piece}
           pieceDef={PIECE_TYPES[piece.typeId]}
           isHighlighted={piece.id === lastPieceId}
+          isSelected={selection.has(piece.id)}
+          onPiecePointerDown={handlePiecePointerDown}
         />
       ))}
       {allPoints.map((pt) => (
