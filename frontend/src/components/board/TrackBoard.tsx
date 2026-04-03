@@ -4,6 +4,7 @@ import { getWorldConnectionPoint } from "../../lib/track/geometry";
 import { getFreeConnectionPoints } from "../../lib/track/operations";
 import { useTrackLayout, useTrackLayoutDispatch } from "../../context/TrackLayoutContext";
 import { useViewBox } from "../../hooks/useViewBox";
+import { useBoxSelect } from "../../hooks/useBoxSelect";
 import { TrackPieceShape } from "./TrackPieceShape";
 import { ConnectionDot } from "./ConnectionDot";
 
@@ -15,6 +16,11 @@ export function TrackBoard() {
   const dispatch = useTrackLayoutDispatch();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const { viewBox, handlers, spaceHeld } = useViewBox(svgRef);
+
+  const { isBoxSelecting, selectionRect, startBoxSelect, updateBoxSelect, endBoxSelect } =
+    useBoxSelect(svgRef, layout.pieces, PIECE_TYPES);
+
+  const boxSelectRef = useRef(false);
 
   const allPoints = useMemo(() => {
     const points: { x: number; y: number; key: string }[] = [];
@@ -37,12 +43,39 @@ export function TrackBoard() {
     dispatch({ type: "SELECT_PIECE", pieceId, additive: e.shiftKey });
   }, [dispatch]);
 
-  const handleBoardPointerDown = useCallback((e: PointerEvent<SVGSVGElement>) => {
-    if (e.button !== 0) return;
-    if (!spaceHeld?.current) {
-      dispatch({ type: "CLEAR_SELECTION" });
-    }
-  }, [dispatch, spaceHeld]);
+  const handleBoardPointerDown = useCallback(
+    (e: PointerEvent<SVGSVGElement>) => {
+      if (e.button !== 0) return;
+      if (spaceHeld?.current) return; // Space+drag is pan, not box select
+      boxSelectRef.current = true;
+      startBoxSelect(e);
+    },
+    [startBoxSelect, spaceHeld]
+  );
+
+  const handleBoardPointerMove = useCallback(
+    (e: PointerEvent<SVGSVGElement>) => {
+      if (boxSelectRef.current) {
+        updateBoxSelect(e);
+      }
+    },
+    [updateBoxSelect]
+  );
+
+  const handleBoardPointerUp = useCallback(
+    (e: PointerEvent<SVGSVGElement>) => {
+      if (boxSelectRef.current) {
+        boxSelectRef.current = false;
+        const selectedIds = endBoxSelect();
+        if (selectedIds.length > 0) {
+          dispatch({ type: "BOX_SELECT", pieceIds: selectedIds, additive: e.shiftKey });
+        } else {
+          dispatch({ type: "CLEAR_SELECTION" });
+        }
+      }
+    },
+    [endBoxSelect, dispatch]
+  );
 
   return (
     <svg
@@ -56,8 +89,14 @@ export function TrackBoard() {
         handleBoardPointerDown(e);
         handlers.onMouseDown(e as any);
       }}
-      onMouseMove={handlers.onMouseMove}
-      onMouseUp={handlers.onMouseUp}
+      onPointerMove={(e) => {
+        handleBoardPointerMove(e);
+        handlers.onMouseMove(e as any);
+      }}
+      onPointerUp={(e) => {
+        handleBoardPointerUp(e);
+        handlers.onMouseUp();
+      }}
     >
       <defs>
         <pattern
@@ -109,6 +148,19 @@ export function TrackBoard() {
           isFree={freeKeys.has(pt.key)}
         />
       ))}
+      {selectionRect && (
+        <rect
+          x={selectionRect.x}
+          y={selectionRect.y}
+          width={selectionRect.width}
+          height={selectionRect.height}
+          fill="rgba(33, 150, 243, 0.15)"
+          stroke="#2196F3"
+          strokeWidth={0.3}
+          strokeDasharray="1 1"
+          pointerEvents="none"
+        />
+      )}
     </svg>
   );
 }
