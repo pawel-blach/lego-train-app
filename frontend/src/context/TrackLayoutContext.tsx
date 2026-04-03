@@ -6,12 +6,17 @@ import { placeFirstPiece, placePiece, getFreeConnectionPoints } from "../lib/tra
 interface TrackLayoutState {
   layout: Layout;
   lastPieceId: string | null;
+  selection: Set<string>;
 }
 
 type TrackLayoutAction =
   | { type: "ADD_PIECE"; pieceTypeId: string }
   | { type: "REMOVE_PIECE"; pieceId: string }
-  | { type: "SET_LAYOUT"; layout: Layout };
+  | { type: "SET_LAYOUT"; layout: Layout }
+  | { type: "SELECT_PIECE"; pieceId: string; additive: boolean }
+  | { type: "BOX_SELECT"; pieceIds: string[]; additive: boolean }
+  | { type: "CLEAR_SELECTION" }
+  | { type: "MOVE_PIECES"; pieceIds: string[]; dx: number; dy: number; detach: boolean };
 
 function getOutputPointId(typeId: string): string {
   if (typeId === "switchL" || typeId === "switchR") return "through";
@@ -48,7 +53,7 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
       if (state.layout.pieces.size === 0) {
         const newLayout = placeFirstPiece(state.layout, pieceTypeId);
         const newId = findNewPieceId(state.layout, newLayout);
-        return { layout: newLayout, lastPieceId: newId };
+        return { ...state, layout: newLayout, lastPieceId: newId };
       }
 
       // Append to last piece
@@ -69,7 +74,25 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
         newPointId
       );
       const newId = findNewPieceId(state.layout, newLayout);
-      return { layout: newLayout, lastPieceId: newId };
+      return { ...state, layout: newLayout, lastPieceId: newId };
+    }
+    case "SELECT_PIECE": {
+      const { pieceId, additive } = action;
+      const selection = new Set(additive ? state.selection : []);
+      if (additive && selection.has(pieceId)) {
+        selection.delete(pieceId);
+      } else {
+        selection.add(pieceId);
+      }
+      return { ...state, selection };
+    }
+    case "BOX_SELECT": {
+      const { pieceIds, additive } = action;
+      const selection = additive ? new Set([...state.selection, ...pieceIds]) : new Set(pieceIds);
+      return { ...state, selection };
+    }
+    case "CLEAR_SELECTION": {
+      return { ...state, selection: new Set() };
     }
     default:
       return state;
@@ -79,6 +102,7 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
 const initialState: TrackLayoutState = {
   layout: createEmptyLayout(),
   lastPieceId: null,
+  selection: new Set(),
 };
 
 const TrackLayoutContext = createContext<TrackLayoutState>(initialState);
