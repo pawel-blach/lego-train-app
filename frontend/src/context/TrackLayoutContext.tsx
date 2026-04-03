@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, type Dispatch, type ReactNode } from "react";
 import { createEmptyLayout, type Layout } from "../lib/track/layout";
 import { PIECE_TYPES } from "../lib/track/pieces";
-import { placeFirstPiece, placePiece, getFreeConnectionPoints } from "../lib/track/operations";
+import { placeFirstPiece, placePiece, getFreeConnectionPoints, getConnectedSubgraph, movePieces, findNearbyConnection } from "../lib/track/operations";
 
 interface TrackLayoutState {
   layout: Layout;
@@ -93,6 +93,48 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
     }
     case "CLEAR_SELECTION": {
       return { ...state, selection: new Set() };
+    }
+    case "MOVE_PIECES": {
+      const { pieceIds, dx, dy, detach } = action;
+
+      // Determine which pieces actually move
+      let movingIds: Set<string>;
+      if (detach) {
+        movingIds = new Set(pieceIds);
+      } else {
+        movingIds = getConnectedSubgraph(state.layout, pieceIds);
+      }
+
+      // Move pieces and break external connections
+      let newLayout = movePieces(state.layout, movingIds, dx, dy, detach);
+
+      // Check for nearby connection snap
+      const snap = findNearbyConnection(newLayout, movingIds);
+      if (snap) {
+        // Apply snap offset to all moved pieces
+        newLayout = movePieces(
+          { pieces: newLayout.pieces, connections: newLayout.connections },
+          movingIds,
+          snap.dx,
+          snap.dy,
+          false
+        );
+        // Add the new connection
+        newLayout = {
+          ...newLayout,
+          connections: [
+            ...newLayout.connections,
+            {
+              pieceAId: snap.movedPieceId,
+              pointAId: snap.movedPointId,
+              pieceBId: snap.staticPieceId,
+              pointBId: snap.staticPointId,
+            },
+          ],
+        };
+      }
+
+      return { ...state, layout: newLayout };
     }
     default:
       return state;
