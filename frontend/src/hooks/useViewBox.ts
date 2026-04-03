@@ -35,6 +35,8 @@ export function useViewBox(svgRef: RefObject<SVGSVGElement | null>) {
   const lastMovePos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const inertiaRef = useRef<number | null>(null);
 
+  const spaceHeld = useRef(false);
+
   const cancelInertia = useCallback(() => {
     if (inertiaRef.current !== null) {
       cancelAnimationFrame(inertiaRef.current);
@@ -44,6 +46,26 @@ export function useViewBox(svgRef: RefObject<SVGSVGElement | null>) {
 
   // Cleanup on unmount
   useEffect(() => cancelInertia, [cancelInertia]);
+
+  // Track Space key for Space+drag pan
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !e.repeat) {
+        spaceHeld.current = true;
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        spaceHeld.current = false;
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
 
   const screenToSvgScale = useCallback(() => {
     const svg = svgRef.current;
@@ -94,7 +116,9 @@ export function useViewBox(svgRef: RefObject<SVGSVGElement | null>) {
 
   const onMouseDown = useCallback(
     (e: MouseEvent<SVGSVGElement>) => {
-      if (e.button !== 0) return;
+      const isPan = e.button === 1 || (e.button === 0 && spaceHeld.current);
+      if (!isPan) return;
+      e.preventDefault();
       cancelInertia();
       dragRef.current = { startX: e.clientX, startY: e.clientY, startVb: vb };
       velocitySamples.current = [];
@@ -190,5 +214,6 @@ export function useViewBox(svgRef: RefObject<SVGSVGElement | null>) {
   return {
     viewBox,
     handlers: { onMouseDown, onMouseMove, onMouseUp },
+    spaceHeld,
   };
 }
