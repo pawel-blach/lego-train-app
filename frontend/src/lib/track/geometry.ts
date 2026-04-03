@@ -48,6 +48,44 @@ function normalizeRotationIndex(raw: number): RotationIndex {
   return n as RotationIndex;
 }
 
+export interface BoundingBox {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+export function getPieceBoundingBox(piece: PlacedPiece, pieceDef: PieceTypeDef): BoundingBox {
+  const GAUGE = 4;
+  const points: { x: number; y: number }[] = [];
+
+  for (const pt of pieceDef.connectionPoints) {
+    const world = getWorldConnectionPoint(piece, pt);
+    points.push({ x: world.x, y: world.y });
+  }
+
+  points.push({ x: piece.x, y: piece.y });
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of points) {
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y > maxY) maxY = p.y;
+  }
+
+  return {
+    minX: minX - GAUGE,
+    minY: minY - GAUGE,
+    maxX: maxX + GAUGE,
+    maxY: maxY + GAUGE,
+  };
+}
+
+export function boxesOverlap(a: BoundingBox, b: BoundingBox): boolean {
+  return a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY;
+}
+
 export function computeSnapTransform(
   target: WorldConnectionPoint,
   pieceType: PieceTypeDef,
