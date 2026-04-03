@@ -5,6 +5,7 @@ import { getFreeConnectionPoints } from "../../lib/track/operations";
 import { useTrackLayout, useTrackLayoutDispatch } from "../../context/TrackLayoutContext";
 import { useViewBox } from "../../hooks/useViewBox";
 import { useBoxSelect } from "../../hooks/useBoxSelect";
+import { usePieceDrag } from "../../hooks/usePieceDrag";
 import { TrackPieceShape } from "./TrackPieceShape";
 import { ConnectionDot } from "./ConnectionDot";
 
@@ -19,6 +20,8 @@ export function TrackBoard() {
 
   const { isBoxSelecting, selectionRect, startBoxSelect, updateBoxSelect, endBoxSelect } =
     useBoxSelect(svgRef, layout.pieces, PIECE_TYPES);
+
+  const { dragPreview, startDrag, updateDrag, endDrag } = usePieceDrag(svgRef);
 
   const boxSelectRef = useRef(false);
 
@@ -39,9 +42,15 @@ export function TrackBoard() {
     return new Set(free.map((fp) => `${fp.pieceId}:${fp.pointId}`));
   }, [layout]);
 
-  const handlePiecePointerDown = useCallback((pieceId: string, e: PointerEvent) => {
-    dispatch({ type: "SELECT_PIECE", pieceId, additive: e.shiftKey });
-  }, [dispatch]);
+  const handlePiecePointerDown = useCallback(
+    (pieceId: string, e: PointerEvent) => {
+      if (!selection.has(pieceId)) {
+        dispatch({ type: "SELECT_PIECE", pieceId, additive: e.shiftKey });
+      }
+      startDrag(pieceId, e);
+    },
+    [dispatch, selection, startDrag]
+  );
 
   const handleBoardPointerDown = useCallback(
     (e: PointerEvent<SVGSVGElement>) => {
@@ -55,15 +64,29 @@ export function TrackBoard() {
 
   const handleBoardPointerMove = useCallback(
     (e: PointerEvent<SVGSVGElement>) => {
+      if (updateDrag(e)) return; // piece drag takes priority
       if (boxSelectRef.current) {
         updateBoxSelect(e);
       }
     },
-    [updateBoxSelect]
+    [updateDrag, updateBoxSelect]
   );
 
   const handleBoardPointerUp = useCallback(
     (e: PointerEvent<SVGSVGElement>) => {
+      const dragResult = endDrag();
+      if (dragResult) {
+        const pieceIds = [...selection];
+        if (pieceIds.length === 0) pieceIds.push(dragResult.pieceId);
+        dispatch({
+          type: "MOVE_PIECES",
+          pieceIds,
+          dx: dragResult.dx,
+          dy: dragResult.dy,
+          detach: e.altKey,
+        });
+        return;
+      }
       if (boxSelectRef.current) {
         boxSelectRef.current = false;
         const selectedIds = endBoxSelect();
@@ -74,7 +97,7 @@ export function TrackBoard() {
         }
       }
     },
-    [endBoxSelect, dispatch]
+    [endDrag, endBoxSelect, dispatch, selection]
   );
 
   return (
@@ -148,6 +171,19 @@ export function TrackBoard() {
           isFree={freeKeys.has(pt.key)}
         />
       ))}
+      {dragPreview && (
+        <g opacity={0.5}>
+          {[...layout.pieces.values()]
+            .filter((piece) => selection.has(piece.id))
+            .map((piece) => (
+              <TrackPieceShape
+                key={`ghost-${piece.id}`}
+                piece={{ ...piece, x: piece.x + dragPreview.dx, y: piece.y + dragPreview.dy }}
+                pieceDef={PIECE_TYPES[piece.typeId]}
+              />
+            ))}
+        </g>
+      )}
       {selectionRect && (
         <rect
           x={selectionRect.x}
