@@ -4,4 +4,9 @@
   body {
     background-color: #ffffff;
   }
+
+  /* react95 TreeView: Tailwind's border-box sizing shrinks the +/- toggle */
+  details > summary::before {
+    box-sizing: content-box;
+  }
 }

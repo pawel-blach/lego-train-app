@@ -1,20 +1,37 @@
 import { useMemo } from "react";
+import {
+  Window,
+  WindowHeader,
+  WindowContent,
+  TreeView,
+  Button,
+} from "react95";
+import type { TreeLeaf } from "react95/dist/TreeView/TreeView";
 import { trackPieceTree } from "../../data/trackPieceTree";
 import { useTrackLayout, useTrackLayoutDispatch } from "../../context/TrackLayoutContext";
 import { defaultBudget } from "../../data/budgets/default";
 import { getRemainingCounts } from "../../lib/track/budget";
 import type { TreeItem } from "../../types/track";
 
-function collectLeaves(items: TreeItem[]): TreeItem[] {
-  const leaves: TreeItem[] = [];
-  for (const item of items) {
+function toTreeLeaves(
+  items: TreeItem[],
+  remainingCounts: Map<string, number>
+): TreeLeaf<string>[] {
+  return items.map((item) => {
     if (item.children) {
-      leaves.push(...collectLeaves(item.children));
-    } else {
-      leaves.push(item);
+      return {
+        id: item.id,
+        label: item.label,
+        items: toTreeLeaves(item.children, remainingCounts),
+      };
     }
-  }
-  return leaves;
+    const remaining = remainingCounts.get(item.id) ?? 0;
+    return {
+      id: item.id,
+      label: `${item.label} (${remaining})`,
+      disabled: remaining <= 0,
+    };
+  });
 }
 
 interface BuildExplorerProps {
@@ -31,39 +48,37 @@ export function BuildExplorer({ open, onClose }: BuildExplorerProps) {
     [layout]
   );
 
-  const leaves = useMemo(() => collectLeaves(trackPieceTree), []);
+  const tree = useMemo(
+    () => toTreeLeaves(trackPieceTree, remainingCounts),
+    [remainingCounts]
+  );
 
-  function handleAdd(pieceTypeId: string) {
-    const remaining = remainingCounts.get(pieceTypeId) ?? 0;
+  function handleNodeSelect(_event: React.MouseEvent<HTMLElement>, id: string) {
+    const remaining = remainingCounts.get(id) ?? 0;
     if (remaining <= 0) return;
-    dispatch({ type: "ADD_PIECE", pieceTypeId });
+    dispatch({ type: "ADD_PIECE", pieceTypeId: id });
   }
 
   if (!open) return null;
 
   return (
-    <aside className="absolute top-2 left-2 z-40 bg-white border border-gray-300 w-56">
-      <div className="flex items-center justify-between px-2 py-1 border-b border-gray-200">
-        <span className="font-bold text-sm">Build Explorer</span>
-        <button className="text-sm px-1 hover:bg-gray-100" onClick={onClose}>X</button>
-      </div>
-      <div className="p-2 space-y-1">
-        {leaves.map((item) => {
-          const remaining = remainingCounts.get(item.id) ?? 0;
-          const isDisabled = remaining <= 0;
-          return (
-            <div
-              key={item.id}
-              className={`px-2 py-0.5 text-sm ${
-                isDisabled ? "opacity-50" : "cursor-pointer hover:bg-gray-100"
-              }`}
-              onClick={() => !isDisabled && handleAdd(item.id)}
-            >
-              {item.label} ({remaining})
-            </div>
-          );
-        })}
-      </div>
-    </aside>
+    <Window
+      shadow
+      style={{ position: "absolute", top: 8, left: 8, zIndex: 40, width: 240 }}
+    >
+      <WindowHeader style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span>Build Explorer</span>
+        <Button onClick={onClose} size="sm" square>
+          <span style={{ fontWeight: "bold" }}>✕</span>
+        </Button>
+      </WindowHeader>
+      <WindowContent>
+        <TreeView
+          tree={tree}
+          onNodeSelect={handleNodeSelect}
+          defaultExpanded={["track-pieces"]}
+        />
+      </WindowContent>
+    </Window>
   );
 }
