@@ -14,7 +14,7 @@ const GRID_SIZE = 8;
 const GRID_EXTENT = 10000;
 
 export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean; moveWholeTrack: boolean }) {
-  const { layout, lastPieceId, selection } = useTrackLayout();
+  const { layout, lastPieceId, selection, budgets } = useTrackLayout();
   const dispatch = useTrackLayoutDispatch();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const { viewBox, handlers, isPanning } = useViewBox(svgRef, selectMode);
@@ -37,6 +37,14 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
     }
     return points;
   }, [layout]);
+
+  const budgetColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of budgets) {
+      map.set(b.id, b.color);
+    }
+    return map;
+  }, [budgets]);
 
   const freeKeys = useMemo(() => {
     const free = getFreeConnectionPoints(layout);
@@ -170,6 +178,7 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
           key={piece.id}
           piece={piece}
           pieceDef={PIECE_TYPES[piece.typeId]}
+          budgetColor={budgetColorMap.get(piece.budgetId)}
           isHighlighted={piece.id === lastPieceId}
           isSelected={selection.has(piece.id)}
           selectMode={selectMode}
@@ -193,6 +202,7 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
                 key={`ghost-${piece.id}`}
                 piece={{ ...piece, x: piece.x + dragPreview.dx, y: piece.y + dragPreview.dy }}
                 pieceDef={PIECE_TYPES[piece.typeId]}
+                budgetColor={budgetColorMap.get(piece.budgetId)}
               />
             ))}
         </g>
