@@ -2,23 +2,34 @@ import { createContext, useContext, useReducer, type Dispatch, type ReactNode } 
 import { createEmptyLayout, type Layout } from "../lib/track/layout";
 import { PIECE_TYPES } from "../lib/track/pieces";
 import { placeFirstPiece, placePiece, getFreeConnectionPoints, getConnectedSubgraph, movePieces, findNearbyConnection } from "../lib/track/operations";
+import type { Budget } from "../types/track";
+
+interface UndoSnapshot {
+  layout: Layout;
+  budgets: Budget[];
+  lastUsedBudgetByType: Record<string, string>;
+}
 
 interface TrackLayoutState {
   layout: Layout;
   lastPieceId: string | null;
   selection: Set<string>;
-  undoStack: Layout[];
+  undoStack: UndoSnapshot[];
+  budgets: Budget[];
+  lastUsedBudgetByType: Record<string, string>;
 }
 
 type TrackLayoutAction =
-  | { type: "ADD_PIECE"; pieceTypeId: string }
+  | { type: "ADD_PIECE"; pieceTypeId: string; budgetId: string }
   | { type: "REMOVE_PIECE"; pieceId: string }
   | { type: "SET_LAYOUT"; layout: Layout }
   | { type: "SELECT_PIECE"; pieceId: string; additive: boolean }
   | { type: "BOX_SELECT"; pieceIds: string[]; additive: boolean }
   | { type: "CLEAR_SELECTION" }
   | { type: "MOVE_PIECES"; pieceIds: string[]; dx: number; dy: number; detach: boolean }
-  | { type: "UNDO" };
+  | { type: "UNDO" }
+  | { type: "ADD_BUDGET"; budget: Budget }
+  | { type: "DELETE_BUDGET"; budgetId: string };
 
 function getOutputPointId(typeId: string): string {
   if (typeId === "switchL" || typeId === "switchR") return "through";
@@ -45,27 +56,50 @@ function isPointFree(layout: Layout, pieceId: string, pointId: string): boolean 
   );
 }
 
+function takeSnapshot(state: TrackLayoutState): UndoSnapshot {
+  return {
+    layout: state.layout,
+    budgets: state.budgets,
+    lastUsedBudgetByType: { ...state.lastUsedBudgetByType },
+  };
+}
+
 function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayoutState {
   switch (action.type) {
     case "UNDO": {
       if (state.undoStack.length === 0) return state;
-      const prevLayout = state.undoStack[state.undoStack.length - 1];
+      const snapshot = state.undoStack[state.undoStack.length - 1];
       return {
         ...state,
-        layout: prevLayout,
+        layout: snapshot.layout,
+        budgets: snapshot.budgets,
+        lastUsedBudgetByType: snapshot.lastUsedBudgetByType,
         undoStack: state.undoStack.slice(0, -1),
         lastPieceId: null,
       };
     }
     case "ADD_PIECE": {
-      const { pieceTypeId } = action;
+      const { pieceTypeId, budgetId } = action;
       if (!PIECE_TYPES[pieceTypeId]) return state;
+
+      const snapshot = takeSnapshot(state);
 
       // First piece on empty board
       if (state.layout.pieces.size === 0) {
         const newLayout = placeFirstPiece(state.layout, pieceTypeId);
         const newId = findNewPieceId(state.layout, newLayout);
-        return { ...state, layout: newLayout, lastPieceId: newId, undoStack: [...state.undoStack, state.layout] };
+        // Set budgetId on the new piece
+        if (newId) {
+          const piece = newLayout.pieces.get(newId)!;
+          newLayout.pieces.set(newId, { ...piece, budgetId });
+        }
+        return {
+          ...state,
+          layout: newLayout,
+          lastPieceId: newId,
+          undoStack: [...state.undoStack, snapshot],
+          lastUsedBudgetByType: { ...state.lastUsedBudgetByType, [pieceTypeId]: budgetId },
+        };
       }
 
       // Append to last piece
@@ -86,7 +120,18 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
         newPointId
       );
       const newId = findNewPieceId(state.layout, newLayout);
-      return { ...state, layout: newLayout, lastPieceId: newId, undoStack: [...state.undoStack, state.layout] };
+      // Set budgetId on the new piece
+      if (newId) {
+        const piece = newLayout.pieces.get(newId)!;
+        newLayout.pieces.set(newId, { ...piece, budgetId });
+      }
+      return {
+        ...state,
+        layout: newLayout,
+        lastPieceId: newId,
+        undoStack: [...state.undoStack, snapshot],
+        lastUsedBudgetByType: { ...state.lastUsedBudgetByType, [pieceTypeId]: budgetId },
+      };
     }
     case "SELECT_PIECE": {
       const { pieceId, additive } = action;
@@ -146,7 +191,50 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
         };
       }
 
-      return { ...state, layout: newLayout, undoStack: [...state.undoStack, state.layout] };
+      return { ...state, layout: newLayout, undoStack: [...state.undoStack, takeSnapshot(state)] };
+    }
+    case "ADD_BUDGET": {
+      return {
+        ...state,
+        budgets: [...state.budgets, action.budget],
+      };
+    }
+    case "DELETE_BUDGET": {
+      const { budgetId } = action;
+      const snapshot = takeSnapshot(state);
+
+      // Remove all pieces belonging to this budget
+      const piecesToRemove = new Set<string>();
+      for (const [id, piece] of state.layout.pieces) {
+        if (piece.budgetId === budgetId) {
+          piecesToRemove.add(id);
+        }
+      }
+
+      const newPieces = new Map(state.layout.pieces);
+      for (const id of piecesToRemove) {
+        newPieces.delete(id);
+      }
+
+      // Remove connections involving deleted pieces
+      const newConnections = state.layout.connections.filter(
+        (c) => !piecesToRemove.has(c.pieceAId) && !piecesToRemove.has(c.pieceBId)
+      );
+
+      // Clear lastUsedBudgetByType entries for this budget
+      const newLastUsed = { ...state.lastUsedBudgetByType };
+      for (const [typeId, bid] of Object.entries(newLastUsed)) {
+        if (bid === budgetId) delete newLastUsed[typeId];
+      }
+
+      return {
+        ...state,
+        layout: { pieces: newPieces, connections: newConnections },
+        budgets: state.budgets.filter((b) => b.id !== budgetId),
+        lastUsedBudgetByType: newLastUsed,
+        undoStack: [...state.undoStack, snapshot],
+        lastPieceId: piecesToRemove.has(state.lastPieceId ?? "") ? null : state.lastPieceId,
+      };
     }
     default:
       return state;
@@ -158,6 +246,8 @@ const initialState: TrackLayoutState = {
   lastPieceId: null,
   selection: new Set(),
   undoStack: [],
+  budgets: [],
+  lastUsedBudgetByType: {},
 };
 
 const TrackLayoutContext = createContext<TrackLayoutState>(initialState);
