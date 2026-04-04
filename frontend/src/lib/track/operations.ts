@@ -55,6 +55,7 @@ export function placeFirstPiece(layout: Layout, pieceTypeId: string): Layout {
     x: 0,
     y: 0,
     rotationIndex: 0,
+    budgetId: "",
   };
 
   const pieces = new Map(layout.pieces);
@@ -102,6 +103,7 @@ export function placePiece(
     x: snap.x,
     y: snap.y,
     rotationIndex: snap.rotationIndex,
+    budgetId: "",
   };
 
   const pieces = new Map(layout.pieces);
