@@ -3,9 +3,10 @@ import { Frame, List } from "@react95/core";
 
 interface MenuBarProps {
   onToggleExplorer: () => void;
+  onToggleControls: () => void;
 }
 
-export function MenuBar({ onToggleExplorer }: MenuBarProps) {
+export function MenuBar({ onToggleExplorer, onToggleControls }: MenuBarProps) {
   const [toolsOpen, setToolsOpen] = useState(false);
   const [toolsHover, setToolsHover] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -75,8 +76,17 @@ export function MenuBar({ onToggleExplorer }: MenuBarProps) {
                 setToolsOpen(false);
                 onToggleExplorer();
               }}
->
+            >
               Available parts
+            </List.Item>
+            <List.Item
+              style={{ cursor: "default", fontSize: "12px", padding: "4px 8px" }}
+              onClick={() => {
+                setToolsOpen(false);
+                onToggleControls();
+              }}
+            >
+              Controls
             </List.Item>
           </List>
         )}
