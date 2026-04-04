@@ -17,7 +17,7 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
   const { layout, lastPieceId, selection } = useTrackLayout();
   const dispatch = useTrackLayoutDispatch();
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const { viewBox, handlers, spaceHeld, isPanning } = useViewBox(svgRef, selectMode);
+  const { viewBox, handlers, isPanning } = useViewBox(svgRef, selectMode);
 
   const { isBoxSelecting, selectionRect, startBoxSelect, updateBoxSelect, endBoxSelect } =
     useBoxSelect(svgRef, layout.pieces, PIECE_TYPES);
@@ -57,11 +57,11 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
   const handleBoardPointerDown = useCallback(
     (e: PointerEvent<SVGSVGElement>) => {
       if (e.button !== 0) return;
-      if (spaceHeld?.current || !selectMode) return; // Space+drag or pan mode = pan, not box select
+      if (!selectMode) return; // pan mode = pan, not box select
       boxSelectRef.current = true;
       startBoxSelect(e);
     },
-    [startBoxSelect, spaceHeld, selectMode]
+    [startBoxSelect, selectMode]
   );
 
   const handleBoardPointerMove = useCallback(
