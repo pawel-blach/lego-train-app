@@ -1,4 +1,5 @@
 import type { PointerEvent } from "react";
+import { Cursor } from "@react95/core";
 import type { PlacedPiece } from "../../lib/track/layout";
 import type { PieceTypeDef } from "../../lib/track/pieces";
 
@@ -7,6 +8,7 @@ interface TrackPieceShapeProps {
   pieceDef: PieceTypeDef;
   isHighlighted?: boolean;
   isSelected?: boolean;
+  selectMode?: boolean;
   onPiecePointerDown?: (pieceId: string, e: PointerEvent) => void;
 }
 
@@ -31,7 +33,7 @@ const HIGHLIGHT_COLORS: Record<string, string> = {
 const TRACK_GAUGE = 4;
 const HIT_PADDING = 3;
 
-export function TrackPieceShape({ piece, pieceDef, isHighlighted, isSelected, onPiecePointerDown }: TrackPieceShapeProps) {
+export function TrackPieceShape({ piece, pieceDef, isHighlighted, isSelected, selectMode, onPiecePointerDown }: TrackPieceShapeProps) {
   const color = (isHighlighted ? HIGHLIGHT_COLORS[piece.typeId] : COLORS[piece.typeId]) ?? "#888";
   const rotation = piece.rotationIndex * 22.5;
 
@@ -45,7 +47,7 @@ export function TrackPieceShape({ piece, pieceDef, isHighlighted, isSelected, on
     <g
       transform={`translate(${piece.x}, ${piece.y}) rotate(${rotation})`}
       onPointerDown={handlePointerDown}
-      style={{ cursor: "pointer" }}
+      className={selectMode ? Cursor.Move : ""}
     >
       {renderHitArea(piece.typeId, pieceDef)}
       {renderShape(piece.typeId, pieceDef, color)}

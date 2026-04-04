@@ -4,26 +4,31 @@ import { Frame, List } from "@react95/core";
 interface MenuBarProps {
   onToggleExplorer: () => void;
   onToggleControls: () => void;
+  onUndo: () => void;
+  canUndo: boolean;
 }
 
-export function MenuBar({ onToggleExplorer, onToggleControls }: MenuBarProps) {
+export function MenuBar({ onToggleExplorer, onToggleControls, onUndo, canUndo }: MenuBarProps) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [editHover, setEditHover] = useState(false);
+  const editRef = useRef<HTMLDivElement>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [toolsHover, setToolsHover] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!toolsOpen) return;
+    if (!editOpen && !toolsOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
+      if (editOpen && editRef.current && !editRef.current.contains(e.target as Node)) {
+        setEditOpen(false);
+      }
+      if (toolsOpen && dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setToolsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [toolsOpen]);
+  }, [editOpen, toolsOpen]);
 
   return (
     <Frame
@@ -37,6 +42,57 @@ export function MenuBar({ onToggleExplorer, onToggleControls }: MenuBarProps) {
       <span style={{ fontWeight: "bold", fontSize: "12px" }}>
         Track Designer Pro
       </span>
+
+      <div ref={editRef} style={{ position: "relative" }}>
+        <span
+          style={{
+            fontSize: "12px",
+            padding: "1px 8px",
+            cursor: "default",
+            background: editOpen || editHover ? "#000e7a" : undefined,
+            color: editOpen || editHover ? "#ffffff" : undefined,
+          }}
+          onMouseEnter={() => {
+            setEditHover(true);
+            setEditOpen(true);
+          }}
+          onMouseLeave={() => {
+            setEditHover(false);
+          }}
+        >
+          Edit
+        </span>
+
+        {editOpen && (
+          <List
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              minWidth: 160,
+              marginTop: 2,
+            }}
+            boxShadow="$out"
+            backgroundColor="$material"
+          >
+            <List.Item
+              style={{
+                cursor: canUndo ? "default" : "not-allowed",
+                fontSize: "12px",
+                padding: "4px 8px",
+                color: canUndo ? undefined : "#808080",
+              }}
+              onClick={() => {
+                if (!canUndo) return;
+                setEditOpen(false);
+                onUndo();
+              }}
+            >
+              Undo&nbsp;&nbsp;&nbsp;&nbsp;Ctrl+Z
+            </List.Item>
+          </List>
+        )}
+      </div>
 
       <div ref={dropdownRef} style={{ position: "relative" }}>
         <span

@@ -7,6 +7,7 @@ interface TrackLayoutState {
   layout: Layout;
   lastPieceId: string | null;
   selection: Set<string>;
+  undoStack: Layout[];
 }
 
 type TrackLayoutAction =
@@ -16,7 +17,8 @@ type TrackLayoutAction =
   | { type: "SELECT_PIECE"; pieceId: string; additive: boolean }
   | { type: "BOX_SELECT"; pieceIds: string[]; additive: boolean }
   | { type: "CLEAR_SELECTION" }
-  | { type: "MOVE_PIECES"; pieceIds: string[]; dx: number; dy: number; detach: boolean };
+  | { type: "MOVE_PIECES"; pieceIds: string[]; dx: number; dy: number; detach: boolean }
+  | { type: "UNDO" };
 
 function getOutputPointId(typeId: string): string {
   if (typeId === "switchL" || typeId === "switchR") return "through";
@@ -45,6 +47,16 @@ function isPointFree(layout: Layout, pieceId: string, pointId: string): boolean 
 
 function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayoutState {
   switch (action.type) {
+    case "UNDO": {
+      if (state.undoStack.length === 0) return state;
+      const prevLayout = state.undoStack[state.undoStack.length - 1];
+      return {
+        ...state,
+        layout: prevLayout,
+        undoStack: state.undoStack.slice(0, -1),
+        lastPieceId: null,
+      };
+    }
     case "ADD_PIECE": {
       const { pieceTypeId } = action;
       if (!PIECE_TYPES[pieceTypeId]) return state;
@@ -53,7 +65,7 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
       if (state.layout.pieces.size === 0) {
         const newLayout = placeFirstPiece(state.layout, pieceTypeId);
         const newId = findNewPieceId(state.layout, newLayout);
-        return { ...state, layout: newLayout, lastPieceId: newId };
+        return { ...state, layout: newLayout, lastPieceId: newId, undoStack: [...state.undoStack, state.layout] };
       }
 
       // Append to last piece
@@ -74,7 +86,7 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
         newPointId
       );
       const newId = findNewPieceId(state.layout, newLayout);
-      return { ...state, layout: newLayout, lastPieceId: newId };
+      return { ...state, layout: newLayout, lastPieceId: newId, undoStack: [...state.undoStack, state.layout] };
     }
     case "SELECT_PIECE": {
       const { pieceId, additive } = action;
@@ -134,7 +146,7 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
         };
       }
 
-      return { ...state, layout: newLayout };
+      return { ...state, layout: newLayout, undoStack: [...state.undoStack, state.layout] };
     }
     default:
       return state;
@@ -145,6 +157,7 @@ const initialState: TrackLayoutState = {
   layout: createEmptyLayout(),
   lastPieceId: null,
   selection: new Set(),
+  undoStack: [],
 };
 
 const TrackLayoutContext = createContext<TrackLayoutState>(initialState);

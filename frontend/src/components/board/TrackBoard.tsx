@@ -1,4 +1,5 @@
 import { useRef, useMemo, useCallback, type PointerEvent } from "react";
+import { Cursor } from "@react95/core";
 import { PIECE_TYPES } from "../../lib/track/pieces";
 import { getWorldConnectionPoint } from "../../lib/track/geometry";
 import { getFreeConnectionPoints } from "../../lib/track/operations";
@@ -16,7 +17,7 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
   const { layout, lastPieceId, selection } = useTrackLayout();
   const dispatch = useTrackLayoutDispatch();
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const { viewBox, handlers, spaceHeld } = useViewBox(svgRef, selectMode);
+  const { viewBox, handlers, spaceHeld, isPanning } = useViewBox(svgRef, selectMode);
 
   const { isBoxSelecting, selectionRect, startBoxSelect, updateBoxSelect, endBoxSelect } =
     useBoxSelect(svgRef, layout.pieces, PIECE_TYPES);
@@ -101,6 +102,16 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
     [endDrag, endBoxSelect, dispatch, selection, moveWholeTrack]
   );
 
+  const cursorClass = dragPreview
+    ? Cursor.Grabbing
+    : isPanning?.current
+      ? Cursor.Grabbing
+      : isBoxSelecting
+        ? Cursor.Crosshair
+        : selectMode
+          ? Cursor.Auto
+          : Cursor.Grab;
+
   return (
     <svg
       ref={svgRef}
@@ -108,7 +119,7 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
       height="100%"
       viewBox={viewBox}
       preserveAspectRatio="xMidYMid meet"
-      className="absolute inset-0"
+      className={`absolute inset-0 ${cursorClass}`}
       onPointerDown={(e) => {
         handleBoardPointerDown(e);
         handlers.onMouseDown(e as any);
@@ -161,6 +172,7 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
           pieceDef={PIECE_TYPES[piece.typeId]}
           isHighlighted={piece.id === lastPieceId}
           isSelected={selection.has(piece.id)}
+          selectMode={selectMode}
           onPiecePointerDown={handlePiecePointerDown}
         />
       ))}

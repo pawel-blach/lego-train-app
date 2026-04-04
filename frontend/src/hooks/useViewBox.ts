@@ -36,6 +36,7 @@ export function useViewBox(svgRef: RefObject<SVGSVGElement | null>, selectMode: 
   const inertiaRef = useRef<number | null>(null);
 
   const spaceHeld = useRef(false);
+  const isPanning = useRef(false);
 
   const cancelInertia = useCallback(() => {
     if (inertiaRef.current !== null) {
@@ -120,6 +121,7 @@ export function useViewBox(svgRef: RefObject<SVGSVGElement | null>, selectMode: 
       if (!isPan) return;
       e.preventDefault();
       cancelInertia();
+      isPanning.current = true;
       dragRef.current = { startX: e.clientX, startY: e.clientY, startVb: vb };
       velocitySamples.current = [];
       lastMoveTime.current = performance.now();
@@ -161,6 +163,7 @@ export function useViewBox(svgRef: RefObject<SVGSVGElement | null>, selectMode: 
   const onMouseUp = useCallback(() => {
     if (!dragRef.current) return;
     dragRef.current = null;
+    isPanning.current = false;
 
     const samples = velocitySamples.current;
     if (samples.length === 0) return;
@@ -215,5 +218,6 @@ export function useViewBox(svgRef: RefObject<SVGSVGElement | null>, selectMode: 
     viewBox,
     handlers: { onMouseDown, onMouseMove, onMouseUp },
     spaceHeld,
+    isPanning,
   };
 }
