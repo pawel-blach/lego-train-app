@@ -3,38 +3,30 @@ import { Cursor } from "@react95/core";
 import type { PlacedPiece } from "../../lib/track/layout";
 import type { PieceTypeDef } from "../../lib/track/pieces";
 
+function lightenColor(hex: string, amount: number): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = Math.min(255, (num >> 16) + amount);
+  const g = Math.min(255, ((num >> 8) & 0x00ff) + amount);
+  const b = Math.min(255, (num & 0x0000ff) + amount);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
 interface TrackPieceShapeProps {
   piece: PlacedPiece;
   pieceDef: PieceTypeDef;
+  budgetColor?: string;
   isHighlighted?: boolean;
   isSelected?: boolean;
   selectMode?: boolean;
   onPiecePointerDown?: (pieceId: string, e: PointerEvent) => void;
 }
 
-const COLORS: Record<string, string> = {
-  straight16: "#555",
-  straight4: "#777",
-  curveR40L: "#2196F3",
-  curveR40R: "#1976D2",
-  switchL: "#FF9800",
-  switchR: "#F57C00",
-};
-
-const HIGHLIGHT_COLORS: Record<string, string> = {
-  straight16: "#888",
-  straight4: "#aaa",
-  curveR40L: "#64B5F6",
-  curveR40R: "#42A5F5",
-  switchL: "#FFB74D",
-  switchR: "#FFA726",
-};
-
 const TRACK_GAUGE = 4;
 const HIT_PADDING = 3;
 
-export function TrackPieceShape({ piece, pieceDef, isHighlighted, isSelected, selectMode, onPiecePointerDown }: TrackPieceShapeProps) {
-  const color = (isHighlighted ? HIGHLIGHT_COLORS[piece.typeId] : COLORS[piece.typeId]) ?? "#888";
+export function TrackPieceShape({ piece, pieceDef, budgetColor, isHighlighted, isSelected, selectMode, onPiecePointerDown }: TrackPieceShapeProps) {
+  const baseColor = budgetColor ?? "#888";
+  const color = isHighlighted ? lightenColor(baseColor, 40) : baseColor;
   const rotation = piece.rotationIndex * 22.5;
 
   const handlePointerDown = (e: PointerEvent) => {
