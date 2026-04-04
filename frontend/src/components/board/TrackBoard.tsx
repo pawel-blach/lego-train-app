@@ -132,7 +132,7 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
           <path
             d={`M ${GRID_SIZE} 0 L 0 0 0 ${GRID_SIZE}`}
             fill="none"
-            stroke="rgba(0,0,0,0.12)"
+            stroke="rgba(0,100,100,0.25)"
             strokeWidth={0.3}
           />
         </pattern>
@@ -144,7 +144,7 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
         y={-GRID_EXTENT}
         width={GRID_EXTENT * 2}
         height={GRID_EXTENT * 2}
-        fill="#2e7d32"
+        fill="rgb(0,128,128)"
       />
       <rect
         x={-GRID_EXTENT}

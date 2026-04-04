@@ -9,7 +9,14 @@ interface ControlsProps {
   onMoveWholeTrackChange: (value: boolean) => void;
 }
 
-export function Controls({ open, onClose, selectMode, onSelectModeChange, moveWholeTrack, onMoveWholeTrackChange }: ControlsProps) {
+export function Controls({
+  open,
+  onClose,
+  selectMode,
+  onSelectModeChange,
+  moveWholeTrack,
+  onMoveWholeTrackChange,
+}: ControlsProps) {
   if (!open) return null;
 
   return (
@@ -29,7 +36,9 @@ export function Controls({ open, onClose, selectMode, onSelectModeChange, moveWh
           <Checkbox
             checked={selectMode}
             onChange={() => onSelectModeChange(!selectMode)}
-          >Select and move parts</Checkbox>
+          >
+            Select and move parts
+          </Checkbox>
           <p
             style={{
               marginLeft: 22,
@@ -46,7 +55,8 @@ export function Controls({ open, onClose, selectMode, onSelectModeChange, moveWh
               marginTop: 8,
             }}
           >
-            You can also change this setting by pressing S on your keyboard.
+            You can also enable this setting by pressing V on your keyboard and
+            disable it by pressing H.
           </p>
         </Frame>
       </Fieldset>
@@ -58,7 +68,9 @@ export function Controls({ open, onClose, selectMode, onSelectModeChange, moveWh
           <Checkbox
             checked={moveWholeTrack}
             onChange={() => onMoveWholeTrackChange(!moveWholeTrack)}
-          >Move the whole track</Checkbox>
+          >
+            Move the whole track
+          </Checkbox>
           <p
             style={{
               marginLeft: 22,
@@ -75,7 +87,16 @@ export function Controls({ open, onClose, selectMode, onSelectModeChange, moveWh
               marginTop: 8,
             }}
           >
-            You can also change this setting by pressing D on your keyboard.
+            You can toggle this setting by pressing D on your keyboard.
+          </p>
+          <p
+            style={{
+              marginLeft: 22,
+              marginTop: 8,
+            }}
+          >
+            You can also force this mode by clicking while holding the Alt /
+            Option key, even if the option is disabled.
           </p>
         </Frame>
       </Fieldset>

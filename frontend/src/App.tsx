@@ -8,17 +8,26 @@ import { TrackLayoutProvider } from "./context/TrackLayoutContext";
 export default function App() {
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
-  const [selectMode, setSelectMode] = useState(true);
+  const [selectMode, setSelectMode] = useState(false);
   const [moveWholeTrack, setMoveWholeTrack] = useState(true);
 
-  const toggleSelectMode = useCallback(() => setSelectMode((v) => !v), []);
-  const toggleMoveWholeTrack = useCallback(() => setMoveWholeTrack((v) => !v), []);
+  const toggleMoveWholeTrack = useCallback(
+    () => setMoveWholeTrack((v) => !v),
+    [],
+  );
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === "s" || e.key === "S") {
-        toggleSelectMode();
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
+      if (e.key === "v" || e.key === "V") {
+        setSelectMode(true);
+      }
+      if (e.key === "h" || e.key === "H") {
+        setSelectMode(false);
       }
       if (e.key === "d" || e.key === "D") {
         toggleMoveWholeTrack();
@@ -26,7 +35,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [toggleSelectMode, toggleMoveWholeTrack]);
+  }, [toggleMoveWholeTrack]);
 
   return (
     <TrackLayoutProvider>
@@ -35,9 +44,12 @@ export default function App() {
           onToggleExplorer={() => setExplorerOpen((o) => !o)}
           onToggleControls={() => setControlsOpen((o) => !o)}
         />
-        <main className="flex-1 relative overflow-hidden bg-[#2e7d32] cursor-default">
+        <main className="flex-1 relative overflow-hidden bg-[rgb(0,128,128)] cursor-default">
           <TrackBoard selectMode={selectMode} moveWholeTrack={moveWholeTrack} />
-          <BuildExplorer open={explorerOpen} onClose={() => setExplorerOpen(false)} />
+          <BuildExplorer
+            open={explorerOpen}
+            onClose={() => setExplorerOpen(false)}
+          />
           <Controls
             open={controlsOpen}
             onClose={() => setControlsOpen(false)}
