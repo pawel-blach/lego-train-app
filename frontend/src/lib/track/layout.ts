@@ -6,6 +6,7 @@ export interface PlacedPiece {
   x: number;
   y: number;
   rotationIndex: RotationIndex;
+  budgetId: string;
 }
 
 export interface Connection {

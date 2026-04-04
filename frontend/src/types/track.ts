@@ -5,7 +5,9 @@ export interface TreeItem {
   children?: TreeItem[];
 }
 
-export interface TrackBudget {
+export interface Budget {
+  id: string;
   name: string;
+  color: string;
   pieces: Record<string, number>;
 }
