@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MenuBar } from "./components/layout/MenuBar";
 import { BuildExplorer } from "./components/sidebar/BuildExplorer";
 import { Controls } from "./components/sidebar/Controls";
@@ -8,6 +8,25 @@ import { TrackLayoutProvider } from "./context/TrackLayoutContext";
 export default function App() {
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
+  const [selectMode, setSelectMode] = useState(true);
+  const [moveWholeTrack, setMoveWholeTrack] = useState(true);
+
+  const toggleSelectMode = useCallback(() => setSelectMode((v) => !v), []);
+  const toggleMoveWholeTrack = useCallback(() => setMoveWholeTrack((v) => !v), []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "s" || e.key === "S") {
+        toggleSelectMode();
+      }
+      if (e.key === "d" || e.key === "D") {
+        toggleMoveWholeTrack();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [toggleSelectMode, toggleMoveWholeTrack]);
 
   return (
     <TrackLayoutProvider>
@@ -17,9 +36,16 @@ export default function App() {
           onToggleControls={() => setControlsOpen((o) => !o)}
         />
         <main className="flex-1 relative overflow-hidden bg-[#2e7d32] cursor-default">
-          <TrackBoard />
+          <TrackBoard selectMode={selectMode} moveWholeTrack={moveWholeTrack} />
           <BuildExplorer open={explorerOpen} onClose={() => setExplorerOpen(false)} />
-          <Controls open={controlsOpen} onClose={() => setControlsOpen(false)} />
+          <Controls
+            open={controlsOpen}
+            onClose={() => setControlsOpen(false)}
+            selectMode={selectMode}
+            onSelectModeChange={setSelectMode}
+            moveWholeTrack={moveWholeTrack}
+            onMoveWholeTrackChange={setMoveWholeTrack}
+          />
         </main>
       </div>
     </TrackLayoutProvider>

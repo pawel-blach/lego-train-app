@@ -25,7 +25,7 @@ interface VelocitySample {
   vy: number;
 }
 
-export function useViewBox(svgRef: RefObject<SVGSVGElement | null>) {
+export function useViewBox(svgRef: RefObject<SVGSVGElement | null>, selectMode: boolean = true) {
   const [vb, setVb] = useState<ViewBoxState>(INITIAL_VIEWBOX);
   const dragRef = useRef<{ startX: number; startY: number; startVb: ViewBoxState } | null>(null);
 
@@ -116,7 +116,7 @@ export function useViewBox(svgRef: RefObject<SVGSVGElement | null>) {
 
   const onMouseDown = useCallback(
     (e: MouseEvent<SVGSVGElement>) => {
-      const isPan = e.button === 1 || (e.button === 0 && spaceHeld.current);
+      const isPan = e.button === 1 || (e.button === 0 && (spaceHeld.current || !selectMode));
       if (!isPan) return;
       e.preventDefault();
       cancelInertia();
@@ -125,7 +125,7 @@ export function useViewBox(svgRef: RefObject<SVGSVGElement | null>) {
       lastMoveTime.current = performance.now();
       lastMovePos.current = { x: e.clientX, y: e.clientY };
     },
-    [vb, cancelInertia]
+    [vb, cancelInertia, selectMode]
   );
 
   const onMouseMove = useCallback(

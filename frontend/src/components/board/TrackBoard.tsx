@@ -12,11 +12,11 @@ import { ConnectionDot } from "./ConnectionDot";
 const GRID_SIZE = 8;
 const GRID_EXTENT = 10000;
 
-export function TrackBoard() {
+export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean; moveWholeTrack: boolean }) {
   const { layout, lastPieceId, selection } = useTrackLayout();
   const dispatch = useTrackLayoutDispatch();
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const { viewBox, handlers, spaceHeld } = useViewBox(svgRef);
+  const { viewBox, handlers, spaceHeld } = useViewBox(svgRef, selectMode);
 
   const { isBoxSelecting, selectionRect, startBoxSelect, updateBoxSelect, endBoxSelect } =
     useBoxSelect(svgRef, layout.pieces, PIECE_TYPES);
@@ -44,22 +44,23 @@ export function TrackBoard() {
 
   const handlePiecePointerDown = useCallback(
     (pieceId: string, e: PointerEvent) => {
+      if (!selectMode) return;
       if (!selection.has(pieceId)) {
         dispatch({ type: "SELECT_PIECE", pieceId, additive: e.shiftKey });
       }
       startDrag(pieceId, e);
     },
-    [dispatch, selection, startDrag]
+    [dispatch, selection, startDrag, selectMode]
   );
 
   const handleBoardPointerDown = useCallback(
     (e: PointerEvent<SVGSVGElement>) => {
       if (e.button !== 0) return;
-      if (spaceHeld?.current) return; // Space+drag is pan, not box select
+      if (spaceHeld?.current || !selectMode) return; // Space+drag or pan mode = pan, not box select
       boxSelectRef.current = true;
       startBoxSelect(e);
     },
-    [startBoxSelect, spaceHeld]
+    [startBoxSelect, spaceHeld, selectMode]
   );
 
   const handleBoardPointerMove = useCallback(
@@ -83,7 +84,7 @@ export function TrackBoard() {
           pieceIds,
           dx: dragResult.dx,
           dy: dragResult.dy,
-          detach: e.altKey,
+          detach: e.altKey || !moveWholeTrack,
         });
         return;
       }
@@ -97,7 +98,7 @@ export function TrackBoard() {
         }
       }
     },
-    [endDrag, endBoxSelect, dispatch, selection]
+    [endDrag, endBoxSelect, dispatch, selection, moveWholeTrack]
   );
 
   return (
