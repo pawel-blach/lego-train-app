@@ -12,12 +12,26 @@ function AppContent() {
   const [boardMode, setBoardMode] = useState<BoardMode>("pan");
   const [moveWholeTrack, setMoveWholeTrack] = useState(true);
 
-  const { undoStack } = useTrackLayout();
+  const { undoStack, room } = useTrackLayout();
   const dispatch = useTrackLayoutDispatch();
 
   const handleUndo = useCallback(() => {
     dispatch({ type: "UNDO" });
   }, [dispatch]);
+
+  const handleDefineRoom = useCallback(() => {
+    if (room) {
+      dispatch({ type: "CLEAR_ROOM" });
+    }
+    setBoardMode("room");
+  }, [room, dispatch]);
+
+  const handleClearRoom = useCallback(() => {
+    dispatch({ type: "CLEAR_ROOM" });
+    if (boardMode === "room") {
+      setBoardMode("pan");
+    }
+  }, [dispatch, boardMode]);
 
   const toggleMoveWholeTrack = useCallback(
     () => setMoveWholeTrack((v) => !v),
@@ -31,6 +45,13 @@ function AppContent() {
         e.target instanceof HTMLTextAreaElement
       )
         return;
+      if (e.key === "Escape") {
+        if (boardMode === "room") {
+          dispatch({ type: "CLEAR_ROOM" });
+          setBoardMode("pan");
+          return;
+        }
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === "z") {
         e.preventDefault();
         handleUndo();
@@ -59,9 +80,17 @@ function AppContent() {
         onToggleControls={() => setControlsOpen((o) => !o)}
         onUndo={handleUndo}
         canUndo={undoStack.length > 0}
+        hasRoom={room !== null}
+        isRoomMode={boardMode === "room"}
+        onDefineRoom={handleDefineRoom}
+        onClearRoom={handleClearRoom}
       />
       <main className="flex-1 relative overflow-hidden bg-[rgb(0,128,128)]">
-        <TrackBoard boardMode={boardMode} moveWholeTrack={moveWholeTrack} />
+        <TrackBoard
+          boardMode={boardMode}
+          moveWholeTrack={moveWholeTrack}
+          onExitRoomMode={() => setBoardMode("pan")}
+        />
         <BuildExplorer
           open={explorerOpen}
           onClose={() => setExplorerOpen(false)}

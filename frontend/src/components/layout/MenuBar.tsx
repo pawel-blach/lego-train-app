@@ -6,9 +6,22 @@ interface MenuBarProps {
   onToggleControls: () => void;
   onUndo: () => void;
   canUndo: boolean;
+  hasRoom: boolean;
+  isRoomMode: boolean;
+  onDefineRoom: () => void;
+  onClearRoom: () => void;
 }
 
-export function MenuBar({ onToggleExplorer, onToggleControls, onUndo, canUndo }: MenuBarProps) {
+export function MenuBar({
+  onToggleExplorer,
+  onToggleControls,
+  onUndo,
+  canUndo,
+  hasRoom,
+  isRoomMode,
+  onDefineRoom,
+  onClearRoom,
+}: MenuBarProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [editHover, setEditHover] = useState(false);
   const editRef = useRef<HTMLDivElement>(null);
@@ -143,6 +156,24 @@ export function MenuBar({ onToggleExplorer, onToggleControls, onUndo, canUndo }:
               }}
             >
               Controls
+            </List.Item>
+            <List.Item
+              style={{
+                cursor: "default",
+                fontSize: "12px",
+                padding: "4px 8px",
+                borderTop: "1px solid #808080",
+              }}
+              onClick={() => {
+                setToolsOpen(false);
+                if (hasRoom) {
+                  onClearRoom();
+                } else {
+                  onDefineRoom();
+                }
+              }}
+            >
+              {hasRoom ? "Usuń pomieszczenie" : "Definiuj pomieszczenie"}
             </List.Item>
           </List>
         )}
