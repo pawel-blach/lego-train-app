@@ -8,16 +8,28 @@ import { useTrackLayout, useTrackLayoutDispatch } from "../../context/TrackLayou
 import { useViewBox } from "../../hooks/useViewBox";
 import { useBoxSelect } from "../../hooks/useBoxSelect";
 import { usePieceDrag } from "../../hooks/usePieceDrag";
+import { useRoomDraw } from "../../hooks/useRoomDraw";
 import { TrackPieceShape } from "./TrackPieceShape";
 import { ConnectionDot } from "./ConnectionDot";
+import { RoomDraft, RoomPolygon } from "./RoomShape";
+import { DEFAULT_ROOM_SCALE } from "../../lib/room";
 
 const GRID_SIZE = 8;
 const GRID_EXTENT = 10000;
 
-export function TrackBoard({ boardMode, moveWholeTrack }: { boardMode: BoardMode; moveWholeTrack: boolean }) {
-  const { layout, lastPieceId, selection, budgets } = useTrackLayout();
+export function TrackBoard({
+  boardMode,
+  moveWholeTrack,
+  onExitRoomMode,
+}: {
+  boardMode: BoardMode;
+  moveWholeTrack: boolean;
+  onExitRoomMode?: () => void;
+}) {
+  const { layout, lastPieceId, selection, budgets, room, roomDraft } = useTrackLayout();
   const dispatch = useTrackLayoutDispatch();
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const { cursorPos, isNearFirst, updateCursor, getClickPos, reset: resetRoomDraw } = useRoomDraw(svgRef);
   const { viewBox, handlers, isPanning } = useViewBox(svgRef, boardMode !== "pan");
 
   const { isBoxSelecting, selectionRect, startBoxSelect, updateBoxSelect, endBoxSelect } =
@@ -66,21 +78,41 @@ export function TrackBoard({ boardMode, moveWholeTrack }: { boardMode: BoardMode
   const handleBoardPointerDown = useCallback(
     (e: PointerEvent<SVGSVGElement>) => {
       if (e.button !== 0) return;
-      if (boardMode !== "select") return; // pan mode = pan, not box select
+
+      if (boardMode === "room") {
+        const pos = getClickPos(e);
+        if (!pos) return;
+
+        // Check if near first vertex → close
+        if (roomDraft.length >= 3 && isNearFirst) {
+          dispatch({ type: "CLOSE_ROOM" });
+          resetRoomDraw();
+          onExitRoomMode?.();
+          return;
+        }
+
+        dispatch({ type: "ADD_ROOM_VERTEX", x: pos.x, y: pos.y });
+        return;
+      }
+
+      if (boardMode !== "select") return;
       boxSelectRef.current = true;
       startBoxSelect(e);
     },
-    [startBoxSelect, boardMode]
+    [startBoxSelect, boardMode, getClickPos, roomDraft, isNearFirst, dispatch, resetRoomDraw, onExitRoomMode],
   );
 
   const handleBoardPointerMove = useCallback(
     (e: PointerEvent<SVGSVGElement>) => {
-      if (updateDrag(e)) return; // piece drag takes priority
+      if (boardMode === "room") {
+        updateCursor(e, roomDraft);
+      }
+      if (updateDrag(e)) return;
       if (boxSelectRef.current) {
         updateBoxSelect(e);
       }
     },
-    [updateDrag, updateBoxSelect]
+    [updateDrag, updateBoxSelect, boardMode, updateCursor, roomDraft],
   );
 
   const handleBoardPointerUp = useCallback(
@@ -175,6 +207,17 @@ export function TrackBoard({ boardMode, moveWholeTrack }: { boardMode: BoardMode
         height={GRID_EXTENT * 2}
         fill="url(#grid)"
       />
+
+      {/* Room layer — under track pieces */}
+      {room && <RoomPolygon room={room} />}
+      {boardMode === "room" && (
+        <RoomDraft
+          vertices={roomDraft}
+          cursorPos={cursorPos}
+          isNearFirst={isNearFirst}
+          scale={DEFAULT_ROOM_SCALE}
+        />
+      )}
 
       {[...layout.pieces.values()].map((piece) => (
         <TrackPieceShape
