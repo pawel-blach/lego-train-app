@@ -1,4 +1,5 @@
 import { useRef, useMemo, useCallback, type PointerEvent } from "react";
+import type { BoardMode } from "../../types/track";
 import { Cursor } from "@react95/core";
 import { PIECE_TYPES } from "../../lib/track/pieces";
 import { getWorldConnectionPoint } from "../../lib/track/geometry";
@@ -13,11 +14,11 @@ import { ConnectionDot } from "./ConnectionDot";
 const GRID_SIZE = 8;
 const GRID_EXTENT = 10000;
 
-export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean; moveWholeTrack: boolean }) {
+export function TrackBoard({ boardMode, moveWholeTrack }: { boardMode: BoardMode; moveWholeTrack: boolean }) {
   const { layout, lastPieceId, selection, budgets } = useTrackLayout();
   const dispatch = useTrackLayoutDispatch();
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const { viewBox, handlers, isPanning } = useViewBox(svgRef, selectMode);
+  const { viewBox, handlers, isPanning } = useViewBox(svgRef, boardMode !== "pan");
 
   const { isBoxSelecting, selectionRect, startBoxSelect, updateBoxSelect, endBoxSelect } =
     useBoxSelect(svgRef, layout.pieces, PIECE_TYPES);
@@ -53,23 +54,23 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
 
   const handlePiecePointerDown = useCallback(
     (pieceId: string, e: PointerEvent) => {
-      if (!selectMode) return;
+      if (boardMode !== "select") return;
       if (!selection.has(pieceId)) {
         dispatch({ type: "SELECT_PIECE", pieceId, additive: e.shiftKey });
       }
       startDrag(pieceId, e);
     },
-    [dispatch, selection, startDrag, selectMode]
+    [dispatch, selection, startDrag, boardMode]
   );
 
   const handleBoardPointerDown = useCallback(
     (e: PointerEvent<SVGSVGElement>) => {
       if (e.button !== 0) return;
-      if (!selectMode) return; // pan mode = pan, not box select
+      if (boardMode !== "select") return; // pan mode = pan, not box select
       boxSelectRef.current = true;
       startBoxSelect(e);
     },
-    [startBoxSelect, selectMode]
+    [startBoxSelect, boardMode]
   );
 
   const handleBoardPointerMove = useCallback(
@@ -116,9 +117,11 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
       ? Cursor.Grabbing
       : isBoxSelecting
         ? Cursor.Crosshair
-        : selectMode
-          ? Cursor.Auto
-          : Cursor.Grab;
+        : boardMode === "room"
+          ? Cursor.Crosshair
+          : boardMode === "select"
+            ? Cursor.Auto
+            : Cursor.Grab;
 
   return (
     <svg
@@ -181,7 +184,7 @@ export function TrackBoard({ selectMode, moveWholeTrack }: { selectMode: boolean
           budgetColor={budgetColorMap.get(piece.budgetId)}
           isHighlighted={piece.id === lastPieceId}
           isSelected={selection.has(piece.id)}
-          selectMode={selectMode}
+          selectMode={boardMode === "select"}
           onPiecePointerDown={handlePiecePointerDown}
         />
       ))}

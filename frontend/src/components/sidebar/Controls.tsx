@@ -1,10 +1,11 @@
 import { Frame, Modal, TitleBar, Fieldset, Checkbox } from "@react95/core";
+import type { BoardMode } from "../../types/track";
 
 interface ControlsProps {
   open: boolean;
   onClose: () => void;
-  selectMode: boolean;
-  onSelectModeChange: (value: boolean) => void;
+  boardMode: BoardMode;
+  onBoardModeChange: (mode: BoardMode) => void;
   moveWholeTrack: boolean;
   onMoveWholeTrackChange: (value: boolean) => void;
 }
@@ -12,8 +13,8 @@ interface ControlsProps {
 export function Controls({
   open,
   onClose,
-  selectMode,
-  onSelectModeChange,
+  boardMode,
+  onBoardModeChange,
   moveWholeTrack,
   onMoveWholeTrackChange,
 }: ControlsProps) {
@@ -34,8 +35,8 @@ export function Controls({
       <Fieldset legend="Left button behavior" style={{ margin: 8, width: 290 }}>
         <Frame display="flex" flexDirection="column" style={{ margin: 8 }}>
           <Checkbox
-            checked={selectMode}
-            onChange={() => onSelectModeChange(!selectMode)}
+            checked={boardMode === "select"}
+            onChange={() => onBoardModeChange(boardMode === "select" ? "pan" : "select")}
           >
             Select and move parts
           </Checkbox>

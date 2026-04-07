@@ -1,3 +1,5 @@
+export type BoardMode = "pan" | "select" | "room";
+
 export interface TreeItem {
   id: string;
   label: string;

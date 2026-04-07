@@ -4,11 +4,12 @@ import { BuildExplorer } from "./components/sidebar/BuildExplorer";
 import { Controls } from "./components/sidebar/Controls";
 import { TrackBoard } from "./components/board/TrackBoard";
 import { TrackLayoutProvider, useTrackLayout, useTrackLayoutDispatch } from "./context/TrackLayoutContext";
+import type { BoardMode } from "./types/track";
 
 function AppContent() {
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
-  const [selectMode, setSelectMode] = useState(false);
+  const [boardMode, setBoardMode] = useState<BoardMode>("pan");
   const [moveWholeTrack, setMoveWholeTrack] = useState(true);
 
   const { undoStack } = useTrackLayout();
@@ -36,10 +37,12 @@ function AppContent() {
         return;
       }
       if (e.key === "v" || e.key === "V") {
-        setSelectMode(true);
+        if (boardMode === "room") dispatch({ type: "CLEAR_ROOM" });
+        setBoardMode("select");
       }
       if (e.key === "h" || e.key === "H") {
-        setSelectMode(false);
+        if (boardMode === "room") dispatch({ type: "CLEAR_ROOM" });
+        setBoardMode("pan");
       }
       if (e.key === "d" || e.key === "D") {
         toggleMoveWholeTrack();
@@ -47,7 +50,7 @@ function AppContent() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [toggleMoveWholeTrack, handleUndo]);
+  }, [toggleMoveWholeTrack, handleUndo, boardMode, dispatch]);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden text-black text-sm">
@@ -58,7 +61,7 @@ function AppContent() {
         canUndo={undoStack.length > 0}
       />
       <main className="flex-1 relative overflow-hidden bg-[rgb(0,128,128)]">
-        <TrackBoard selectMode={selectMode} moveWholeTrack={moveWholeTrack} />
+        <TrackBoard boardMode={boardMode} moveWholeTrack={moveWholeTrack} />
         <BuildExplorer
           open={explorerOpen}
           onClose={() => setExplorerOpen(false)}
@@ -66,8 +69,8 @@ function AppContent() {
         <Controls
           open={controlsOpen}
           onClose={() => setControlsOpen(false)}
-          selectMode={selectMode}
-          onSelectModeChange={setSelectMode}
+          boardMode={boardMode}
+          onBoardModeChange={setBoardMode}
           moveWholeTrack={moveWholeTrack}
           onMoveWholeTrackChange={setMoveWholeTrack}
         />
