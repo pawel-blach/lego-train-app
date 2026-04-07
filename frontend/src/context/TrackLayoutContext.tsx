@@ -2,12 +2,14 @@ import { createContext, useContext, useReducer, type Dispatch, type ReactNode } 
 import { createEmptyLayout, type Layout } from "../lib/track/layout";
 import { PIECE_TYPES } from "../lib/track/pieces";
 import { placeFirstPiece, placePiece, getFreeConnectionPoints, getConnectedSubgraph, movePieces, findNearbyConnection } from "../lib/track/operations";
-import type { Budget } from "../types/track";
+import type { Budget, Room, RoomVertex } from "../types/track";
+import { DEFAULT_ROOM_SCALE } from "../lib/room";
 
 interface UndoSnapshot {
   layout: Layout;
   budgets: Budget[];
   lastUsedBudgetByType: Record<string, string>;
+  room: Room | null;
 }
 
 interface TrackLayoutState {
@@ -17,6 +19,8 @@ interface TrackLayoutState {
   undoStack: UndoSnapshot[];
   budgets: Budget[];
   lastUsedBudgetByType: Record<string, string>;
+  room: Room | null;
+  roomDraft: RoomVertex[];
 }
 
 type TrackLayoutAction =
@@ -29,7 +33,10 @@ type TrackLayoutAction =
   | { type: "MOVE_PIECES"; pieceIds: string[]; dx: number; dy: number; detach: boolean }
   | { type: "UNDO" }
   | { type: "ADD_BUDGET"; budget: Budget }
-  | { type: "DELETE_BUDGET"; budgetId: string };
+  | { type: "DELETE_BUDGET"; budgetId: string }
+  | { type: "ADD_ROOM_VERTEX"; x: number; y: number }
+  | { type: "CLOSE_ROOM" }
+  | { type: "CLEAR_ROOM" };
 
 function getOutputPointId(typeId: string): string {
   if (typeId === "switchL" || typeId === "switchR") return "through";
@@ -61,6 +68,7 @@ function takeSnapshot(state: TrackLayoutState): UndoSnapshot {
     layout: state.layout,
     budgets: state.budgets,
     lastUsedBudgetByType: { ...state.lastUsedBudgetByType },
+    room: state.room,
   };
 }
 
@@ -74,6 +82,7 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
         layout: snapshot.layout,
         budgets: snapshot.budgets,
         lastUsedBudgetByType: snapshot.lastUsedBudgetByType,
+        room: snapshot.room,
         undoStack: state.undoStack.slice(0, -1),
         lastPieceId: null,
       };
@@ -236,6 +245,32 @@ function reducer(state: TrackLayoutState, action: TrackLayoutAction): TrackLayou
         lastPieceId: piecesToRemove.has(state.lastPieceId ?? "") ? null : state.lastPieceId,
       };
     }
+    case "ADD_ROOM_VERTEX": {
+      return {
+        ...state,
+        roomDraft: [...state.roomDraft, { x: action.x, y: action.y }],
+      };
+    }
+    case "CLOSE_ROOM": {
+      if (state.roomDraft.length < 3) return state;
+      const snapshot = takeSnapshot(state);
+      return {
+        ...state,
+        room: { vertices: state.roomDraft, scale: DEFAULT_ROOM_SCALE },
+        roomDraft: [],
+        undoStack: [...state.undoStack, snapshot],
+      };
+    }
+    case "CLEAR_ROOM": {
+      if (!state.room && state.roomDraft.length === 0) return state;
+      const snapshot = takeSnapshot(state);
+      return {
+        ...state,
+        room: null,
+        roomDraft: [],
+        undoStack: [...state.undoStack, snapshot],
+      };
+    }
     default:
       return state;
   }
@@ -248,6 +283,8 @@ const initialState: TrackLayoutState = {
   undoStack: [],
   budgets: [],
   lastUsedBudgetByType: {},
+  room: null,
+  roomDraft: [],
 };
 
 const TrackLayoutContext = createContext<TrackLayoutState>(initialState);
