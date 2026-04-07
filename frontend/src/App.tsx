@@ -81,7 +81,6 @@ function AppContent() {
         onUndo={handleUndo}
         canUndo={undoStack.length > 0}
         hasRoom={room !== null}
-        isRoomMode={boardMode === "room"}
         onDefineRoom={handleDefineRoom}
         onClearRoom={handleClearRoom}
       />

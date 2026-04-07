@@ -7,7 +7,6 @@ interface MenuBarProps {
   onUndo: () => void;
   canUndo: boolean;
   hasRoom: boolean;
-  isRoomMode: boolean;
   onDefineRoom: () => void;
   onClearRoom: () => void;
 }
@@ -18,7 +17,6 @@ export function MenuBar({
   onUndo,
   canUndo,
   hasRoom,
-  isRoomMode,
   onDefineRoom,
   onClearRoom,
 }: MenuBarProps) {
