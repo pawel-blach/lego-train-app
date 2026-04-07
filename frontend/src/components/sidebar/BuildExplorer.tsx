@@ -139,32 +139,34 @@ export function BuildExplorer({ open, onClose }: BuildExplorerProps) {
         style={{ position: "absolute", top: 8, left: 8, zIndex: 40, width: 260, height: 320 }}
         dragOptions={{ disabled: false }}
       >
-        <Tabs defaultActiveTab="All" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <Tab title="All">
-            <Frame
-              boxShadow="in"
-              bg="white"
-              style={{ flex: 1, overflow: "auto", padding: 4 }}
-            >
-              <Tree data={allTreeData} />
-            </Frame>
-          </Tab>
-          <Tab title="Budgets">
-            <Frame
-              boxShadow="in"
-              bg="white"
-              style={{ flex: 1, overflow: "auto", padding: 4 }}
-            >
-              {budgets.length === 0 ? (
-                <div style={{ padding: 8, color: "#666" }}>
-                  No budgets yet. Add one below.
-                </div>
-              ) : (
-                <Tree data={budgetTreeData} />
-              )}
-            </Frame>
-          </Tab>
-        </Tabs>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <Tabs defaultActiveTab="All">
+            <Tab title="All">
+              <Frame
+                boxShadow="in"
+                bg="white"
+                style={{ height: 180, overflow: "auto", padding: 4 }}
+              >
+                <Tree data={allTreeData} />
+              </Frame>
+            </Tab>
+            <Tab title="Budgets">
+              <Frame
+                boxShadow="in"
+                bg="white"
+                style={{ height: 180, overflow: "auto", padding: 4 }}
+              >
+                {budgets.length === 0 ? (
+                  <div style={{ padding: 8, color: "#666" }}>
+                    No budgets yet. Add one below.
+                  </div>
+                ) : (
+                  <Tree data={budgetTreeData} />
+                )}
+              </Frame>
+            </Tab>
+          </Tabs>
+        </div>
         <div style={{ padding: 4 }}>
           <Button onClick={() => setShowAddModal(true)} style={{ width: "100%" }}>
             Add Budget
